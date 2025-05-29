@@ -1,3 +1,5 @@
+export const runtime = "edge";
+
 import { streamText } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
 
