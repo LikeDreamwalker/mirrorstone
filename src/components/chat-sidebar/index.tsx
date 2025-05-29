@@ -15,15 +15,29 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
+  SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, MessageSquare, Home, Sparkles, Trash2 } from "lucide-react";
+import {
+  Plus,
+  MessageSquare,
+  Home,
+  Sparkles,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
 import type { ChatHistory } from "@/lib/types";
 import {
   deleteChatFromIndexedDB,
   cleanupDuplicateChats,
 } from "@/lib/indexeddb";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@radix-ui/react-dropdown-menu";
 
 interface ChatSidebarProps {
   chatHistory: ChatHistory[];
@@ -130,32 +144,50 @@ export function ChatSidebar({
                     <SidebarMenuButton
                       onClick={() => onLoadChat(chat)}
                       isActive={currentChatId === chat.id}
-                      className="w-full justify-between group"
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium">
-                            {formatChatTitle(chat)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatDate(chat.timestamp)}
-                          </div>
+                      <div className="flex items-center">
+                        <MessageSquare className="size-4 flex-shrink-0 mr-2" />
+                        <div className="truncate text-sm font-medium">
+                          {formatChatTitle(chat)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDate(chat.timestamp)}
                         </div>
                       </div>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
-                        onClick={(e) => handleDeleteChat(chat.id, e)}
-                        disabled={deletingChatId === chat.id}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
                     </SidebarMenuButton>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => handleDeleteChat(chat.id, e)}
+                      disabled={deletingChatId === chat.id}
+                    >
+                      <Trash2 />
+                    </Button>
                   </SidebarMenuItem>
                 ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <a href="#">
+                      <Home />
+                      <span>Home</span>
+                    </a>
+                  </SidebarMenuButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuAction>
+                        <MoreHorizontal />
+                      </SidebarMenuAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="right" align="start">
+                      <DropdownMenuItem>
+                        <span>Edit Project</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <span>Delete Project</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
               </SidebarMenu>
             </ScrollArea>
           </SidebarGroupContent>
