@@ -46,7 +46,7 @@ export function ChatStatus() {
         <div className="flex items-center gap-2">
           <WifiOff className="h-4 w-4 text-red-600" />
           <span className="text-sm text-red-700 dark:text-red-300">
-            You're offline
+            You&#39;re offline
           </span>
         </div>
       </Card>
