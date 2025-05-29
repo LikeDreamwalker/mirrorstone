@@ -23,7 +23,7 @@ export function openDB(): Promise<IDBDatabase> {
 
 export async function saveChatToIndexedDB(
   chatId: string,
-  messages: any[]
+  messages: ChatHistory["messages"]
 ): Promise<void> {
   try {
     // Don't save empty chats
@@ -129,7 +129,7 @@ export async function cleanupDuplicateChats(): Promise<void> {
     });
 
     // Remove duplicates, keeping the one with most messages
-    for (const [key, chats] of duplicateGroups) {
+    for (const [, chats] of duplicateGroups) {
       if (chats.length > 1) {
         // Sort by message count (descending) and timestamp (descending)
         chats.sort((a, b) => {
