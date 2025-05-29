@@ -94,7 +94,7 @@ export function ChatInterface({
                     message.role === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {message.role === "user" ? (
                       <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
                         <User className="h-4 w-4 text-white" />
@@ -145,7 +145,7 @@ export function ChatInterface({
           {isLoading && (
             <div className="flex gap-3 justify-start">
               <div className="flex gap-3 max-w-[85%]">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
                     <Bot className="h-4 w-4 text-white" />
                   </div>

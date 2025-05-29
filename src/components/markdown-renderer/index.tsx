@@ -87,7 +87,7 @@ function MarkdownBase({
 
       // Paragraphs and text
       p: ({ children, ...props }) => (
-        <span className="leading-7 [&:not(:first-child)]:mt-6" {...props}>
+        <span className="leading-7 not-first:mt-6" {...props}>
           {children}
         </span>
       ),
@@ -224,7 +224,7 @@ function MarkdownBase({
                 alt={alt || ""}
                 width={800}
                 height={600}
-                className="object-contain w-full h-auto max-h-[30rem]"
+                className="object-contain w-full h-auto max-h-120"
                 unoptimized
               />
             </div>

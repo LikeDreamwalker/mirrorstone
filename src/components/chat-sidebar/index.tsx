@@ -15,7 +15,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
-  SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,7 +36,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@radix-ui/react-dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 
 interface ChatSidebarProps {
   chatHistory: ChatHistory[];
@@ -140,54 +139,49 @@ export function ChatSidebar({
             <ScrollArea className="h-[400px]">
               <SidebarMenu>
                 {validChats.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
+                  <SidebarMenuItem
+                    key={chat.id}
+                    className="flex items-center group transition"
+                  >
                     <SidebarMenuButton
                       onClick={() => onLoadChat(chat)}
                       isActive={currentChatId === chat.id}
+                      className="flex-1 flex items-center min-w-0"
                     >
-                      <div className="flex items-center">
-                        <MessageSquare className="size-4 flex-shrink-0 mr-2" />
-                        <div className="truncate text-sm font-medium">
-                          {formatChatTitle(chat)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDate(chat.timestamp)}
-                        </div>
+                      <MessageSquare className="size-4 shrink-0 mr-2" />
+                      <div className="truncate text-sm font-medium">
+                        {formatChatTitle(chat)}
+                      </div>
+                      <div className="text-xs text-muted-foreground ml-2">
+                        {formatDate(chat.timestamp)}
                       </div>
                     </SidebarMenuButton>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={(e) => handleDeleteChat(chat.id, e)}
-                      disabled={deletingChatId === chat.id}
-                    >
-                      <Trash2 />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ml-1"
+                          tabIndex={0}
+                          aria-label="Chat actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="right" align="start">
+                        {/* You can add more actions here */}
+                        <DropdownMenuItem
+                          onClick={(e) => handleDeleteChat(chat.id, e)}
+                          disabled={deletingChatId === chat.id}
+                          className="text-red-600 focus:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          <span>Delete Chat</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </SidebarMenuItem>
                 ))}
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <a href="#">
-                      <Home />
-                      <span>Home</span>
-                    </a>
-                  </SidebarMenuButton>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuAction>
-                        <MoreHorizontal />
-                      </SidebarMenuAction>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="start">
-                      <DropdownMenuItem>
-                        <span>Edit Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <span>Delete Project</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
               </SidebarMenu>
             </ScrollArea>
           </SidebarGroupContent>
