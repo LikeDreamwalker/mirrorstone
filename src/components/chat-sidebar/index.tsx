@@ -66,8 +66,14 @@ export function ChatSidebar({
     setDeletingChatId(chatId);
     await deleteChatFromIndexedDB(chatId);
     setDeletingChatId(null);
-    // Reload the page to refresh chat history
-    window.location.reload();
+
+    // If we're deleting the current chat, redirect to new chat
+    if (chatId === currentChatId) {
+      onNewChat();
+    } else {
+      // Just reload the current page to refresh the sidebar
+      window.location.reload();
+    }
   };
 
   const formatChatTitle = (chat: ChatHistory) => {

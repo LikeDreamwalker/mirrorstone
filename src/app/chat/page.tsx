@@ -4,14 +4,16 @@ import type React from "react";
 
 import { useEffect, useState, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { useChat } from "@ai-sdk/react";
+import { useChat } from "ai/react";
 import { ChatSidebar } from "@/components/chat-sidebar";
 import { ChatInterface } from "@/components/chat-interface";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { saveChatToIndexedDB, loadChatsFromIndexedDB } from "@/lib/indexeddb";
 import type { ChatHistory } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 function ChatPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
   const chatId = searchParams.get("chatId");
@@ -96,14 +98,14 @@ function ChatPageContent() {
       .substr(2, 9)}`;
     setCurrentChatId(newChatId);
     setMessages([]);
-    window.history.pushState({}, "", "/chat");
+    router.push(`/chat/${newChatId}`);
   };
 
   const loadChat = (chat: ChatHistory) => {
     initialQueryProcessed.current = true;
     setCurrentChatId(chat.id);
     setMessages(chat.messages);
-    window.history.pushState({}, "", `/chat?chatId=${chat.id}`);
+    router.push(`/chat?chatId=${chat.id}`);
   };
 
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -141,6 +143,13 @@ function ChatPageContent() {
 }
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q");
+
+  if (initialQuery) {
+    return <ChatRedirectPage />;
+  }
+
   return (
     <Suspense
       fallback={
@@ -157,5 +166,41 @@ export default function ChatPage() {
     >
       <ChatPageContent />
     </Suspense>
+  );
+}
+
+function ChatRedirectPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q");
+
+  useEffect(() => {
+    // Create a new chat ID and redirect
+    const newChatId = `chat_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    if (initialQuery) {
+      // Redirect with the initial query
+      router.replace(
+        `/chat/${newChatId}?q=${encodeURIComponent(initialQuery)}`
+      );
+    } else {
+      // Redirect to new empty chat
+      router.replace(`/chat/${newChatId}`);
+    }
+  }, [router, initialQuery]);
+
+  // Show loading while redirecting
+  return (
+    <div className="flex h-screen bg-background w-full">
+      <div className="w-64 border-r bg-muted/10 animate-pulse"></div>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Creating new chat...</p>
+        </div>
+      </div>
+    </div>
   );
 }

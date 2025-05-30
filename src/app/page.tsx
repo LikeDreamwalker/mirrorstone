@@ -17,20 +17,20 @@ export default function WelcomePage() {
     e.preventDefault();
     if (query.trim() && !isNavigating) {
       setIsNavigating(true);
-      // Navigate to chat page with the initial query
+      // Navigate to chat page with the initial query - this will create a new chatId
       router.push(`/chat?q=${encodeURIComponent(query.trim())}`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <div className="container px-4 py-16">
         <div className="text-center">
           {/* Header */}
           <div className="mb-16">
             <div className="flex items-center justify-center mb-6">
               <Sparkles className="h-12 w-12 text-blue-600 mr-3" />
-              <h1 className="text-6xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 MirrorStone
               </h1>
             </div>
@@ -57,7 +57,7 @@ export default function WelcomePage() {
               <Button
                 type="submit"
                 size="lg"
-                className="mt-4 px-8 py-3 rounded-xl bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg"
+                className="mt-4 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg"
                 disabled={!query.trim() || isNavigating}
               >
                 {isNavigating ? (
