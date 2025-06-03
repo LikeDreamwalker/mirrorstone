@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   saveChatToIndexedDB,
@@ -10,7 +10,6 @@ import {
 import type { ChatHistory, Message } from "@/lib/types";
 import { ChatInterface } from "@/components/chat-interface";
 
-// Inner component: uses useChat and renders debug/info
 function ChatClientInner({
   chatId,
   initialMessages,
@@ -19,10 +18,22 @@ function ChatClientInner({
   initialMessages: Message[];
 }) {
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
-  console.log(initialMessages, "?>?>?>?1234");
+  const hasAutoSubmittedRef = useRef(false);
+
+  // Detect if we need to auto-submit (last message is user)
+  const needsAutoSubmit =
+    initialMessages.length > 0 &&
+    initialMessages[initialMessages.length - 1].role === "user";
+
+  // Remove last user message if we need to auto-submit
+  const processedInitialMessages = needsAutoSubmit
+    ? initialMessages.slice(0, -1)
+    : initialMessages;
+
   const {
     messages,
     input,
+    setInput,
     handleInputChange,
     handleSubmit,
     status,
@@ -32,7 +43,7 @@ function ChatClientInner({
   } = useChat({
     id: chatId,
     api: "/api/chat",
-    initialMessages,
+    initialMessages: processedInitialMessages,
     onError: (error) => {
       console.error("Chat error:", error);
     },
@@ -54,38 +65,27 @@ function ChatClientInner({
     }
   }, []);
 
-  useEffect(() => {
-    if (messages.length > 0 && chatId) {
-      saveChatToIndexedDB(chatId, messages);
-      loadChatHistory();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, chatId]);
+  // Memoized condition: last message is user & status is ready
+  const shouldAutoSubmit = useMemo(() => {
+    return (
+      needsAutoSubmit && status === "ready" && !hasAutoSubmittedRef.current
+    );
+  }, [needsAutoSubmit, status]);
 
-  // Debug function to test manual message
-  const testManualMessage = () => {
-    console.log("Testing manual message...");
-    append({
-      role: "user",
-      content: "Hello, this is a test message from the chat client",
-    });
-  };
+  useEffect(() => {
+    if (shouldAutoSubmit) {
+      setInput(initialMessages[initialMessages.length - 1].content);
+      setTimeout(() => {
+        handleSubmit?.({
+          preventDefault: () => {},
+        } as React.FormEvent<HTMLFormElement>);
+        hasAutoSubmittedRef.current = true;
+      }, 0);
+    }
+  }, [shouldAutoSubmit, setInput, handleSubmit, initialMessages]);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Debug info - remove in production */}
-      <div className="bg-gray-100 p-2 text-xs mb-2">
-        <p>
-          Messages: {messages.length} | Loading: {status} | Error:{" "}
-          {error ? "Yes" : "No"}
-        </p>
-        <button
-          onClick={testManualMessage}
-          className="bg-blue-500 text-white px-2 py-1 rounded text-xs mt-1"
-        >
-          Test Message
-        </button>
-      </div>
       <ChatInterface
         messages={messages}
         input={input}
@@ -98,7 +98,6 @@ function ChatClientInner({
   );
 }
 
-// Outer component: loads initialMessages from IndexedDB, shows loading spinner
 export default function ChatClient({ chatId }: { chatId: string }) {
   const [initialMessages, setInitialMessages] = useState<Message[] | null>(
     null
