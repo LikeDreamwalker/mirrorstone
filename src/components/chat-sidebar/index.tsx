@@ -1,8 +1,7 @@
 "use client";
 
-import type React from "react";
-
 import { useState, useEffect } from "react";
+import { useRouter, usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Sidebar,
@@ -30,6 +29,7 @@ import type { ChatHistory } from "@/lib/types";
 import {
   deleteChatFromIndexedDB,
   cleanupDuplicateChats,
+  loadChatsFromIndexedDB,
 } from "@/lib/indexeddb";
 import {
   DropdownMenu,
@@ -38,36 +38,55 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-interface ChatSidebarProps {
-  chatHistory: ChatHistory[];
-  currentChatId: string;
-  onNewChat: () => void;
-  onLoadChat: (chat: ChatHistory) => void;
-}
+export function ChatSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
+  const currentChatId = Array.isArray(params.chatId)
+    ? params.chatId[0]
+    : params.chatId || "";
 
-export function ChatSidebar({
-  chatHistory,
-  currentChatId,
-  onNewChat,
-  onLoadChat,
-}: ChatSidebarProps) {
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
 
-  // Clean up duplicates on mount
+  // Load chat history and clean up duplicates on mount
   useEffect(() => {
-    const cleanup = async () => {
+    const load = async () => {
       await cleanupDuplicateChats();
+      const chats = await loadChatsFromIndexedDB();
+      setChatHistory(chats);
     };
-    cleanup();
+    load();
   }, []);
+
+  // Reload chat history after deletion
+  const reloadChats = async () => {
+    const chats = await loadChatsFromIndexedDB();
+    setChatHistory(chats);
+  };
 
   const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDeletingChatId(chatId);
     await deleteChatFromIndexedDB(chatId);
+    await reloadChats();
     setDeletingChatId(null);
-    // Reload the page to refresh chat history
-    window.location.reload();
+
+    // If we're deleting the current chat, redirect to new chat
+    if (chatId === currentChatId) {
+      handleNewChat();
+    }
+  };
+
+  const handleNewChat = () => {
+    const newChatId = `chat_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    router.push(`/${newChatId}`);
+  };
+
+  const handleLoadChat = (chat: ChatHistory) => {
+    router.push(`/${chat.id}`);
   };
 
   const formatChatTitle = (chat: ChatHistory) => {
@@ -108,7 +127,7 @@ export function ChatSidebar({
           <Sparkles className="h-6 w-6 text-blue-600" />
           <span className="font-bold text-lg">MirrorStone</span>
         </div>
-        <Button onClick={onNewChat} className="w-full" size="sm">
+        <Button onClick={handleNewChat} className="w-full" size="sm">
           <Plus className="h-4 w-4 mr-2" />
           New Chat
         </Button>
@@ -144,7 +163,7 @@ export function ChatSidebar({
                     className="flex items-center group transition"
                   >
                     <SidebarMenuButton
-                      onClick={() => onLoadChat(chat)}
+                      onClick={() => handleLoadChat(chat)}
                       isActive={currentChatId === chat.id}
                       className="flex-1 flex items-center min-w-0"
                     >
@@ -169,7 +188,6 @@ export function ChatSidebar({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent side="right" align="start">
-                        {/* You can add more actions here */}
                         <DropdownMenuItem
                           onClick={(e) => handleDeleteChat(chat.id, e)}
                           disabled={deletingChatId === chat.id}
