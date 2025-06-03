@@ -3,10 +3,8 @@ import { ChatSidebar } from "@/components/chat-sidebar";
 
 export default function ChatLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: { chatId: string };
 }) {
   return (
     <SidebarProvider>
