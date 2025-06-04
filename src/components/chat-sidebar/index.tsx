@@ -91,9 +91,10 @@ export function ChatSidebar() {
 
   const formatChatTitle = (chat: ChatHistory) => {
     const firstUserMessage = chat.messages.find((m) => m.role === "user");
-    return firstUserMessage?.content
-      ? firstUserMessage.content.slice(0, 50) +
-          (firstUserMessage.content.length > 50 ? "..." : "")
+    const userText =
+      firstUserMessage?.parts?.find((part) => part.type === "text")?.text ?? "";
+    return userText
+      ? userText.slice(0, 50) + (userText.length > 50 ? "..." : "")
       : "New Chat";
   };
 
