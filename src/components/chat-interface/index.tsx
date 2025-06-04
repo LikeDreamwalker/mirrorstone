@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatStatus } from "@/components/chat-status";
 import { Send, User, Bot, Copy, Check, Sparkles } from "lucide-react";
-import type { Message } from "ai";
+import type { Message } from "@/lib/types";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface ChatInterfaceProps {
@@ -150,65 +150,99 @@ export function ChatInterface({
               </p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+            messages.map((message) => {
+              // Gather all text parts for copy button
+              const textToCopy =
+                message.parts
+                  ?.filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join("\n") ?? "";
+
+              return (
                 <div
-                  className={`flex gap-3 max-w-[85%] ${
-                    message.role === "user" ? "flex-row-reverse" : "flex-row"
+                  key={message.id}
+                  className={`flex gap-3 ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="shrink-0">
-                    {message.role === "user" ? (
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <Card
-                    className={`p-4 relative group ${
-                      message.role === "user"
-                        ? "bg-blue-600 text-white"
-                        : "bg-card border"
+                  <div
+                    className={`flex gap-3 max-w-[85%] ${
+                      message.role === "user" ? "flex-row-reverse" : "flex-row"
                     }`}
                   >
-                    {message.role === "user" ? (
-                      <div className="whitespace-pre-wrap text-white">
-                        {message.content}
-                      </div>
-                    ) : (
-                      <div className="prose-container">
-                        <MarkdownRenderer content={message.content} />
-                      </div>
-                    )}
-                    {message.role === "assistant" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
-                        onClick={() =>
-                          copyToClipboard(message.content, message.id)
-                        }
-                      >
-                        {copiedMessageId === message.id ? (
-                          <Check className="h-3 w-3" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
-                    )}
-                  </Card>
+                    <div className="shrink-0">
+                      {message.role === "user" ? (
+                        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                          <User className="h-4 w-4 text-white" />
+                        </div>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Bot className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <Card
+                      className={`p-4 relative group ${
+                        message.role === "user"
+                          ? "bg-blue-600 text-white"
+                          : "bg-card border"
+                      }`}
+                    >
+                      {message.role === "user" ? (
+                        <div className="whitespace-pre-wrap text-white">
+                          {message.parts?.map((part, idx) =>
+                            part.type === "text" ? (
+                              <span key={idx}>{part.text}</span>
+                            ) : null
+                          )}
+                        </div>
+                      ) : (
+                        <div className="prose-container">
+                          {message.parts?.map((part, idx) => {
+                            if (part.type === "text") {
+                              return (
+                                <MarkdownRenderer
+                                  key={idx}
+                                  content={part.text}
+                                />
+                              );
+                            }
+                            if (part.type === "reasoning") {
+                              return (
+                                <pre
+                                  key={idx}
+                                  className="bg-gray-100 p-2 rounded mb-2"
+                                >
+                                  {part.reasoning}
+                                </pre>
+                              );
+                            }
+                            // Add more part types as needed
+                            return null;
+                          })}
+                        </div>
+                      )}
+                      {message.role === "assistant" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
+                          onClick={() =>
+                            copyToClipboard(textToCopy, message.id)
+                          }
+                        >
+                          {copiedMessageId === message.id ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
+                    </Card>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           {statusBlock}
           <div ref={messagesEndRef} />

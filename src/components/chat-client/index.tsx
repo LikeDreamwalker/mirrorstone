@@ -10,25 +10,15 @@ import {
 import type { ChatHistory, Message } from "@/lib/types";
 import { ChatInterface } from "@/components/chat-interface";
 
-function ChatClientInner({
+export default function ChatClient({
   chatId,
-  initialMessages,
+  initialMessages = [],
 }: {
   chatId: string;
-  initialMessages: Message[];
+  initialMessages?: Message[];
 }) {
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const hasAutoSubmittedRef = useRef(false);
-
-  // Detect if we need to auto-submit (last message is user)
-  const needsAutoSubmit =
-    initialMessages.length > 0 &&
-    initialMessages[initialMessages.length - 1].role === "user";
-
-  // Remove last user message if we need to auto-submit
-  const processedInitialMessages = needsAutoSubmit
-    ? initialMessages.slice(0, -1)
-    : initialMessages;
 
   const {
     messages,
@@ -41,21 +31,61 @@ function ChatClientInner({
     append,
     error,
   } = useChat({
-    id: chatId,
-    api: "/api/chat",
-    initialMessages: processedInitialMessages,
     onError: (error) => {
       console.error("Chat error:", error);
     },
     onFinish: async (message) => {
       if (chatId) {
-        const allMessages = [...messages, message];
+        const allMessages = [...messages, message].map((msg: any) =>
+          msg && typeof msg === "object" && "message" in msg ? msg.message : msg
+        );
         await saveChatToIndexedDB(chatId, allMessages);
-        await loadChatHistory();
+        // Optionally reload chat history here if needed
       }
     },
   });
 
+  // Set initial messages after hook is initialized (AI SDK 5+)
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setMessages, initialMessages]);
+
+  // Memoized: Determine if we need to auto-submit (last message is user)
+  const needsAutoSubmit = useMemo(() => {
+    return (
+      Array.isArray(initialMessages) &&
+      initialMessages.length > 0 &&
+      initialMessages[initialMessages.length - 1]?.role === "user"
+    );
+  }, [initialMessages]);
+
+  const shouldAutoSubmit = useMemo(() => {
+    return (
+      needsAutoSubmit && status === "ready" && !hasAutoSubmittedRef.current
+    );
+  }, [needsAutoSubmit, status]);
+
+  // Auto-submit the last user message if needed
+  useEffect(() => {
+    if (shouldAutoSubmit) {
+      // Get the last user message's text part
+      const lastMsg = initialMessages[initialMessages.length - 1];
+      const lastText =
+        lastMsg?.parts?.find((part) => part.type === "text")?.text ?? "";
+      setInput(lastText);
+      setTimeout(() => {
+        handleSubmit?.({
+          preventDefault: () => {},
+        } as React.FormEvent<HTMLFormElement>);
+        hasAutoSubmittedRef.current = true;
+      }, 0);
+    }
+  }, [shouldAutoSubmit, setInput, handleSubmit, initialMessages]);
+
+  // Optional: Load chat history from IndexedDB
   const loadChatHistory = useCallback(async () => {
     try {
       const chats = await loadChatsFromIndexedDB();
@@ -65,24 +95,10 @@ function ChatClientInner({
     }
   }, []);
 
-  // Memoized condition: last message is user & status is ready
-  const shouldAutoSubmit = useMemo(() => {
-    return (
-      needsAutoSubmit && status === "ready" && !hasAutoSubmittedRef.current
-    );
-  }, [needsAutoSubmit, status]);
-
-  useEffect(() => {
-    if (shouldAutoSubmit) {
-      setInput(initialMessages[initialMessages.length - 1].content);
-      setTimeout(() => {
-        handleSubmit?.({
-          preventDefault: () => {},
-        } as React.FormEvent<HTMLFormElement>);
-        hasAutoSubmittedRef.current = true;
-      }, 0);
-    }
-  }, [shouldAutoSubmit, setInput, handleSubmit, initialMessages]);
+  // Optionally load chat history on mount
+  // useEffect(() => {
+  //   loadChatHistory();
+  // }, [loadChatHistory]);
 
   return (
     <div className="flex flex-col h-full">
@@ -96,40 +112,4 @@ function ChatClientInner({
       />
     </div>
   );
-}
-
-export default function ChatClient({ chatId }: { chatId: string }) {
-  const [initialMessages, setInitialMessages] = useState<Message[] | null>(
-    null
-  );
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      const chat = await getChatFromIndexedDB(chatId);
-      if (!cancelled) {
-        setInitialMessages(chat?.messages ?? []);
-        setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [chatId]);
-
-  if (loading || initialMessages === null) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading chat...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <ChatClientInner chatId={chatId} initialMessages={initialMessages} />;
 }

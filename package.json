@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "latest",
-    "@ai-sdk/react": "^1.2.12",
+    "@ai-sdk/deepseek": "1.0.0-alpha.8",
+    "@ai-sdk/react": "2.0.0-alpha.8",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-dialog": "^1.1.14",
@@ -19,7 +19,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.2.7",
-    "ai": "latest",
+    "ai": "5.0.0-alpha.8",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
