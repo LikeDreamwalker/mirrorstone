@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   saveChatToIndexedDB,
@@ -25,20 +25,27 @@ export default function ChatClient({ chatId }: { chatId: string }) {
     handleSubmit,
     status,
     setMessages,
+    reload,
   } = useChat({
     onError: (error) => {
       console.error("Chat error:", error);
     },
-    onFinish: async ({ message }) => {
+    onFinish: async (data) => {
+      console.log("Chat finished:", data);
+      const { message } = data;
       if (chatId) {
-        console.log(messages, message, "?>?>?>");
-        const allMessages = [...messages, message];
+        const allMessages = [...messagesRef.current, message];
         await saveChatToIndexedDB(chatId, allMessages);
       }
     },
   });
 
-  // 1. On mount/chatId change, load messages and set status
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+    console.log(messages, "Messages updated");
+  }, [messages]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -53,16 +60,14 @@ export default function ChatClient({ chatId }: { chatId: string }) {
           msgs[msgs.length - 1]?.role === "user" &&
           status === "ready"
         ) {
-          console.log(1);
-          // Last message is user: need to auto-submit
-          const lastMsg = msgs[msgs.length - 1];
-          const lastText =
-            lastMsg?.parts?.find((part) => part.type === "text")?.text ?? "";
-          setMessages(msgs.slice(0, -1));
-          setInput(lastText);
+          console.log(2222);
+          setMessages(msgs);
           setChatInitStatus("needInit");
+          // Immediately trigger reload and update status
+          setChatInitStatus("submitting");
+          await reload();
+          setChatInitStatus("ready");
         } else {
-          console.log(2);
           setMessages(msgs);
           setChatInitStatus("ready");
         }
@@ -71,18 +76,7 @@ export default function ChatClient({ chatId }: { chatId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [chatId, setMessages, setInput]);
-
-  // 2. When status is needInit, auto-submit the input, then set to ready
-  useEffect(() => {
-    if (chatInitStatus === "needInit" && input) {
-      setChatInitStatus("submitting");
-      handleSubmit?.({
-        preventDefault: () => {},
-      } as React.FormEvent<HTMLFormElement>);
-      setChatInitStatus("ready");
-    }
-  }, [chatInitStatus, input, handleSubmit]);
+  }, [chatId, setMessages, chatInitStatus, status, reload]);
 
   // Optional: Load chat history from IndexedDB
   const loadChatHistory = useCallback(async () => {
