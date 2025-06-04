@@ -28,7 +28,7 @@ export default function LandingInput() {
       {
         id: messageId,
         role: "user",
-        content: query.trim(),
+        parts: [{ type: "text", text: query.trim() }], // ✅ This is v5 style!
       },
     ]);
     router.push(`/${chatId}`);

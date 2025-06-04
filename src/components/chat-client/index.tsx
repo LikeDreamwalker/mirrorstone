@@ -10,14 +10,9 @@ import {
 import type { ChatHistory, Message } from "@/lib/types";
 import { ChatInterface } from "@/components/chat-interface";
 
-export default function ChatClient({
-  chatId,
-  initialMessages = [],
-}: {
-  chatId: string;
-  initialMessages?: Message[];
-}) {
+export default function ChatClient({ chatId }: { chatId: string }) {
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
+  const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const hasAutoSubmittedRef = useRef(false);
 
   const {
@@ -34,26 +29,31 @@ export default function ChatClient({
     onError: (error) => {
       console.error("Chat error:", error);
     },
-    onFinish: async (message) => {
+    onFinish: async ({ message }) => {
       if (chatId) {
-        const allMessages = [...messages, message].map((msg: any) =>
-          msg && typeof msg === "object" && "message" in msg ? msg.message : msg
-        );
+        const allMessages = [...messages, message];
         await saveChatToIndexedDB(chatId, allMessages);
-        // Optionally reload chat history here if needed
       }
     },
   });
 
-  // Set initial messages after hook is initialized (AI SDK 5+)
+  // Load initial messages from IndexedDB only on mount or when chatId changes
   useEffect(() => {
-    if (initialMessages && initialMessages.length > 0) {
-      setMessages(initialMessages);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setMessages, initialMessages]);
+    let cancelled = false;
+    getChatFromIndexedDB(chatId).then((chat) => {
+      if (!cancelled) {
+        const msgs = chat?.messages ?? [];
+        setInitialMessages(msgs);
+        setMessages(msgs);
+        hasAutoSubmittedRef.current = false; // Reset auto-submit for new chat
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [chatId]);
 
-  // Memoized: Determine if we need to auto-submit (last message is user)
+  // Determine if we need to auto-submit (last message is user)
   const needsAutoSubmit = useMemo(() => {
     return (
       Array.isArray(initialMessages) &&
@@ -68,10 +68,9 @@ export default function ChatClient({
     );
   }, [needsAutoSubmit, status]);
 
-  // Auto-submit the last user message if needed
+  // Auto-submit the last user message if needed, but do NOT remove it from messages
   useEffect(() => {
     if (shouldAutoSubmit) {
-      // Get the last user message's text part
       const lastMsg = initialMessages[initialMessages.length - 1];
       const lastText =
         lastMsg?.parts?.find((part) => part.type === "text")?.text ?? "";
@@ -94,11 +93,6 @@ export default function ChatClient({
       console.error("Error loading chat history:", error);
     }
   }, []);
-
-  // Optionally load chat history on mount
-  // useEffect(() => {
-  //   loadChatHistory();
-  // }, [loadChatHistory]);
 
   return (
     <div className="flex flex-col h-full">

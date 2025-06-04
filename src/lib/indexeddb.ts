@@ -1,4 +1,4 @@
-import type { ChatHistory } from "./types";
+import type { ChatHistory, Message } from "./types";
 
 const DB_NAME = "MirrorStoneDB";
 const DB_VERSION = 1;
@@ -23,7 +23,7 @@ export function openDB(): Promise<IDBDatabase> {
 
 export async function saveChatToIndexedDB(
   chatId: string,
-  messages: ChatHistory["messages"]
+  messages: Message[]
 ): Promise<void> {
   try {
     // Don't save empty chats
