@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
 import {
   saveChatToIndexedDB,
@@ -10,10 +10,12 @@ import {
 import type { ChatHistory, Message } from "@/lib/types";
 import { ChatInterface } from "@/components/chat-interface";
 
+type ChatInitStatus = "default" | "needInit" | "ready" | "submitting";
+
 export default function ChatClient({ chatId }: { chatId: string }) {
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
-  const [pendingAutoSubmit, setPendingAutoSubmit] = useState(false);
-  const hasAutoSubmittedRef = useRef(false);
+  const [chatInitStatus, setChatInitStatus] =
+    useState<ChatInitStatus>("default");
 
   const {
     messages,
@@ -29,53 +31,58 @@ export default function ChatClient({ chatId }: { chatId: string }) {
     },
     onFinish: async ({ message }) => {
       if (chatId) {
+        console.log(messages, message, "?>?>?>");
         const allMessages = [...messages, message];
         await saveChatToIndexedDB(chatId, allMessages);
       }
     },
   });
 
-  useEffect(() => {
-    if (pendingAutoSubmit && input) {
-      handleSubmit?.({
-        preventDefault: () => {},
-      } as React.FormEvent<HTMLFormElement>);
-      hasAutoSubmittedRef.current = true;
-      setPendingAutoSubmit(false);
-    }
-    // Only run when pendingAutoSubmit or input changes
-  }, [pendingAutoSubmit, input, handleSubmit]);
-
+  // 1. On mount/chatId change, load messages and set status
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const chat = await getChatFromIndexedDB(chatId);
-      if (cancelled) return;
-      let msgs = chat?.messages ?? [];
-      hasAutoSubmittedRef.current = false;
+      if (chatInitStatus === "default") {
+        const chat = await getChatFromIndexedDB(chatId);
+        if (cancelled) return;
+        let msgs = chat?.messages ?? [];
 
-      // Check if we need to auto-submit (retry) the last user message
-      if (
-        Array.isArray(msgs) &&
-        msgs.length > 0 &&
-        msgs[msgs.length - 1]?.role === "user"
-      ) {
-        const lastMsg = msgs[msgs.length - 1];
-        const lastText =
-          lastMsg?.parts?.find((part) => part.type === "text")?.text ?? "";
-        // Remove the last user message before setting messages
-        msgs = msgs.slice(0, -1);
-        setMessages(msgs);
-        setInput(lastText);
-        setPendingAutoSubmit(true);
-      } else {
-        setMessages(msgs);
+        if (
+          Array.isArray(msgs) &&
+          msgs.length > 0 &&
+          msgs[msgs.length - 1]?.role === "user" &&
+          status === "ready"
+        ) {
+          console.log(1);
+          // Last message is user: need to auto-submit
+          const lastMsg = msgs[msgs.length - 1];
+          const lastText =
+            lastMsg?.parts?.find((part) => part.type === "text")?.text ?? "";
+          setMessages(msgs.slice(0, -1));
+          setInput(lastText);
+          setChatInitStatus("needInit");
+        } else {
+          console.log(2);
+          setMessages(msgs);
+          setChatInitStatus("ready");
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [chatId]);
+  }, [chatId, setMessages, setInput]);
+
+  // 2. When status is needInit, auto-submit the input, then set to ready
+  useEffect(() => {
+    if (chatInitStatus === "needInit" && input) {
+      setChatInitStatus("submitting");
+      handleSubmit?.({
+        preventDefault: () => {},
+      } as React.FormEvent<HTMLFormElement>);
+      setChatInitStatus("ready");
+    }
+  }, [chatInitStatus, input, handleSubmit]);
 
   // Optional: Load chat history from IndexedDB
   const loadChatHistory = useCallback(async () => {
