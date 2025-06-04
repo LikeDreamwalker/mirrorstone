@@ -91,7 +91,7 @@ function ChatClientInner({
         input={input}
         handleInputChange={handleInputChange}
         handleSubmit={handleSubmit}
-        isLoading={status === "streaming"}
+        status={status}
         hasInitialQuery={false}
       />
     </div>

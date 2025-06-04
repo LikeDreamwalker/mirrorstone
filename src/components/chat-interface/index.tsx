@@ -1,8 +1,7 @@
 "use client";
 
 import type React from "react";
-
-import { useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,7 +10,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatStatus } from "@/components/chat-status";
 import { Send, User, Bot, Copy, Check, Sparkles } from "lucide-react";
 import type { Message } from "ai";
-import { useState } from "react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface ChatInterfaceProps {
@@ -19,7 +17,7 @@ interface ChatInterfaceProps {
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  isLoading: boolean;
+  status: "submitted" | "streaming" | "ready" | "error";
   hasInitialQuery?: boolean;
 }
 
@@ -28,19 +26,30 @@ export function ChatInterface({
   input,
   handleInputChange,
   handleSubmit,
-  isLoading,
+  status,
   hasInitialQuery,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Track previous messages length and last message role
+  const prevMessagesRef = useRef<{ length: number; lastRole: string | null }>({
+    length: messages.length,
+    lastRole: messages.length > 0 ? messages[messages.length - 1].role : null,
+  });
 
-  // useEffect(() => {
-  //   scrollToBottom();
-  // }, [messages]);
+  useEffect(() => {
+    const prev = prevMessagesRef.current;
+    const lastMsg = messages[messages.length - 1];
+    // Only scroll if a new user message is added
+    if (messages.length > prev.length && lastMsg && lastMsg.role === "user") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMessagesRef.current = {
+      length: messages.length,
+      lastRole: lastMsg ? lastMsg.role : null,
+    };
+  }, [messages]);
 
   const copyToClipboard = async (text: string, messageId: string) => {
     try {
@@ -51,6 +60,65 @@ export function ChatInterface({
       console.error("Failed to copy text:", error);
     }
   };
+
+  // Memoized rendering for status
+  const statusBlock = (() => {
+    if (
+      status === "submitted" &&
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "user"
+    ) {
+      // Thinking bubble
+      return (
+        <div className="flex gap-3 justify-start">
+          <div className="flex gap-3 max-w-[85%]">
+            <div className="shrink-0">
+              <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <Card className="p-4 bg-card border">
+              <div className="flex items-center gap-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  MirrorStone is thinking...
+                </span>
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    if (status === "error") {
+      return (
+        <div className="flex gap-3 justify-start">
+          <div className="flex gap-3 max-w-[85%]">
+            <div className="shrink-0">
+              <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <Card className="p-4 bg-card border">
+              <span className="text-sm text-red-600">
+                Sorry, something went wrong. Please try again.
+              </span>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  })();
 
   return (
     <div className="flex flex-col h-screen">
@@ -69,7 +137,7 @@ export function ChatInterface({
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.length === 0 && !isLoading ? (
+          {messages.length === 0 && status === "ready" ? (
             <div className="text-center py-12">
               <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium mb-2">
@@ -142,35 +210,7 @@ export function ChatInterface({
               </div>
             ))
           )}
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <div className="flex gap-3 max-w-[85%]">
-                <div className="shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-                <Card className="p-4 bg-card border">
-                  <div className="flex items-center gap-2">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      MirrorStone is thinking...
-                    </span>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
+          {statusBlock}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
@@ -184,9 +224,16 @@ export function ChatInterface({
               onChange={handleInputChange}
               placeholder="Ask MirrorStone anything..."
               className="flex-1"
-              disabled={isLoading}
+              disabled={status === "streaming" || status === "submitted"}
             />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                status === "streaming" ||
+                status === "submitted" ||
+                !input.trim()
+              }
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>
