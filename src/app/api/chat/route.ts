@@ -1,6 +1,11 @@
 export const runtime = "edge";
 
-import { streamText, convertToModelMessages } from "ai";
+import {
+  streamText,
+  generateText,
+  convertToModelMessages,
+  smoothStream,
+} from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
 import type { UIMessage } from "ai";
 
@@ -12,16 +17,30 @@ export async function POST(req: Request) {
 
     const { messages }: { messages: UIMessage[] } = await req.json();
 
-    const result = streamText({
-      model: deepseek("deepseek-chat"),
+    // Step 1: Run deepseek-reasoner to analyze/decompose
+    const reasonerResult = await generateText({
+      model: deepseek("deepseek-reasoner"),
       messages: convertToModelMessages(messages),
       temperature: 0.7,
     });
 
-    // This is the recommended way for AI SDK 5 Alpha chat streaming
+    // Step 2: Use the output of step 1 as input for deepseek-chat
+    const chatPrompt = reasonerResult.text;
+
+    const result = streamText({
+      model: deepseek("deepseek-chat"),
+      messages: [
+        {
+          role: "system",
+          content: "Solve the following tasks as thoroughly as possible.",
+        },
+        { role: "user", content: chatPrompt },
+      ],
+      temperature: 0.7,
+      experimental_transform: smoothStream(),
+    });
+
     return result.toUIMessageStreamResponse({});
-    // Or, if you want reasoning tokens and your SDK supports it:
-    // return result.toDataStreamResponse({ sendReasoning: true });
   } catch (error) {
     console.error("Chat API error:", error);
     return new Response("Failed to process chat request", { status: 500 });
