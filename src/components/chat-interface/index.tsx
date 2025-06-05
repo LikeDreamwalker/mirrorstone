@@ -213,7 +213,7 @@ export function ChatInterface({
                                   key={idx}
                                   className="bg-gray-100 p-2 rounded mb-2"
                                 >
-                                  {part.reasoning}
+                                  {part.text}
                                 </pre>
                               );
                             }

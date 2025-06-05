@@ -30,12 +30,9 @@ export default function ChatClient({ chatId }: { chatId: string }) {
     onError: (error) => {
       console.error("Chat error:", error);
     },
-    onFinish: async (data) => {
-      console.log("Chat finished:", data);
-      const { message } = data;
+    onFinish: async () => {
       if (chatId) {
-        const allMessages = [...messagesRef.current, message];
-        await saveChatToIndexedDB(chatId, allMessages);
+        await saveChatToIndexedDB(chatId, messagesRef.current);
       }
     },
   });
@@ -43,7 +40,6 @@ export default function ChatClient({ chatId }: { chatId: string }) {
   const messagesRef = useRef<Message[]>([]);
   useEffect(() => {
     messagesRef.current = messages;
-    console.log(messages, "Messages updated");
   }, [messages]);
 
   useEffect(() => {
@@ -60,7 +56,6 @@ export default function ChatClient({ chatId }: { chatId: string }) {
           msgs[msgs.length - 1]?.role === "user" &&
           status === "ready"
         ) {
-          console.log(2222);
           setMessages(msgs);
           setChatInitStatus("needInit");
           // Immediately trigger reload and update status
@@ -77,16 +72,6 @@ export default function ChatClient({ chatId }: { chatId: string }) {
       cancelled = true;
     };
   }, [chatId, setMessages, chatInitStatus, status, reload]);
-
-  // Optional: Load chat history from IndexedDB
-  const loadChatHistory = useCallback(async () => {
-    try {
-      const chats = await loadChatsFromIndexedDB();
-      setChatHistory(chats);
-    } catch (error) {
-      console.error("Error loading chat history:", error);
-    }
-  }, []);
 
   return (
     <div className="flex flex-col h-full">
