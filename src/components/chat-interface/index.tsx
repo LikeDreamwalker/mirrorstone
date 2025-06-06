@@ -5,12 +5,18 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatStatus } from "@/components/chat-status";
 import { Send, User, Bot, Copy, Check, Sparkles } from "lucide-react";
 import type { Message } from "@/lib/types";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -182,7 +188,7 @@ export function ChatInterface({
                       )}
                     </div>
                     <Card
-                      className={`p-4 relative group ${
+                      className={`p-4 relative group w-full ${
                         message.role === "user"
                           ? "bg-blue-600 text-white"
                           : "bg-card border"
@@ -209,12 +215,27 @@ export function ChatInterface({
                             }
                             if (part.type === "reasoning") {
                               return (
-                                <pre
-                                  key={idx}
-                                  className="bg-gray-100 p-2 rounded mb-2"
-                                >
-                                  {part.text}
-                                </pre>
+                                <Card key={idx} className="p-0 mb-2">
+                                  <Accordion
+                                    type="single"
+                                    collapsible
+                                    defaultValue="reasoning"
+                                  >
+                                    <AccordionItem value="reasoning">
+                                      <CardHeader className="px-4 py-0">
+                                        <AccordionTrigger className="text-sm font-semibold">
+                                          Thoughts
+                                        </AccordionTrigger>
+                                      </CardHeader>
+
+                                      <AccordionContent>
+                                        <CardContent className="px-4 py-0 text-xs text-muted-foreground">
+                                          {part.text}
+                                        </CardContent>
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                </Card>
                               );
                             }
                             // Add more part types as needed
