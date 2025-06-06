@@ -11,6 +11,7 @@ interface ActionDefinition {
   description: string;
   syntax: string;
   example: string;
+  canRunInParallel: boolean; // New property to determine if action can run in parallel
   handler: (
     params: string,
     controller: ReadableStreamDefaultController,
@@ -26,6 +27,7 @@ const AVAILABLE_ACTIONS: ActionDefinition[] = [
     description: "Get a detailed answer to a specific question",
     syntax: "ANSWER: [question]",
     example: "ANSWER: What is machine learning?",
+    canRunInParallel: true, // Independent questions can run in parallel
     handler: async (
       question: string,
       controller: ReadableStreamDefaultController,
@@ -77,6 +79,7 @@ const AVAILABLE_ACTIONS: ActionDefinition[] = [
     description: "Search for specific information or facts",
     syntax: "SEARCH: [search query]",
     example: "SEARCH: latest developments in AI 2024",
+    canRunInParallel: true, // Independent searches can run in parallel
     handler: async (
       query: string,
       controller: ReadableStreamDefaultController,
@@ -95,7 +98,6 @@ const AVAILABLE_ACTIONS: ActionDefinition[] = [
         )
       );
 
-      // Simulate search with focused query
       const searchResult = await generateText({
         model: deepseek("deepseek-chat"),
         messages: [
@@ -130,6 +132,7 @@ const AVAILABLE_ACTIONS: ActionDefinition[] = [
     description: "Perform detailed analysis of a topic or concept",
     syntax: "ANALYZE: [topic to analyze]",
     example: "ANALYZE: pros and cons of remote work",
+    canRunInParallel: true, // Independent analyses can run in parallel
     handler: async (
       topic: string,
       controller: ReadableStreamDefaultController,
@@ -176,6 +179,56 @@ const AVAILABLE_ACTIONS: ActionDefinition[] = [
       );
     },
   },
+  {
+    id: "SUMMARIZE",
+    name: "Summarize Content",
+    description: "Create a concise summary of given content",
+    syntax: "SUMMARIZE: [content to summarize]",
+    example: "SUMMARIZE: the main points of quantum computing",
+    canRunInParallel: false, // Might depend on previous results, so run sequentially
+    handler: async (
+      content: string,
+      controller: ReadableStreamDefaultController,
+      encoder: TextEncoder
+    ) => {
+      console.log("Executing SUMMARIZE action for:", content);
+
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            type: "text",
+            role: "assistant",
+            text: `\n\n**📝 Summarizing: ${content}**\n`,
+            step: "notify",
+          })}\n\n`
+        )
+      );
+
+      const summaryResult = await generateText({
+        model: deepseek("deepseek-chat"),
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an expert at creating concise, informative summaries that capture key points and insights.",
+          },
+          { role: "user", content: `Summarize the following: ${content}` },
+        ],
+        temperature: 0.4,
+      });
+
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            type: "text",
+            role: "assistant",
+            text: summaryResult.text + "\n",
+            step: "summary",
+          })}\n\n`
+        )
+      );
+    },
+  },
 ];
 
 // Helper functions
@@ -183,7 +236,6 @@ function buildAgentPrompt(): string {
   const actionsList = AVAILABLE_ACTIONS.map(
     (action) => `- ${action.syntax} - ${action.description}`
   ).join("\n");
-
   const examples = AVAILABLE_ACTIONS.map((action) => action.example).join("\n");
 
   return `You are an expert AI agent. For every user question:
@@ -216,6 +268,122 @@ function findActionHandler(
     }
   }
   return null;
+}
+
+// Group actions for parallel/sequential execution
+function groupActionsByExecution(
+  actionMatches: Array<{ action: ActionDefinition; params: string }>
+) {
+  const parallelActions: Array<{ action: ActionDefinition; params: string }> =
+    [];
+  const sequentialActions: Array<{ action: ActionDefinition; params: string }> =
+    [];
+
+  for (const match of actionMatches) {
+    if (match.action.canRunInParallel) {
+      parallelActions.push(match);
+    } else {
+      sequentialActions.push(match);
+    }
+  }
+
+  return { parallelActions, sequentialActions };
+}
+
+// Execute actions in parallel
+async function executeActionsInParallel(
+  actions: Array<{ action: ActionDefinition; params: string }>,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder
+) {
+  if (actions.length === 0) return;
+
+  console.log(
+    `Executing ${actions.length} actions in parallel:`,
+    actions.map((a) => `${a.action.id}: ${a.params}`)
+  );
+
+  // Notify user about parallel execution
+  controller.enqueue(
+    encoder.encode(
+      `data: ${JSON.stringify({
+        type: "text",
+        role: "assistant",
+        text: `\n\n**⚡ Running ${actions.length} tasks in parallel...**\n`,
+        step: "parallel-start",
+      })}\n\n`
+    )
+  );
+
+  // Execute all actions concurrently
+  const promises = actions.map(async ({ action, params }) => {
+    try {
+      await action.handler(params, controller, encoder);
+      return { success: true, action: action.id, params };
+    } catch (error) {
+      console.error(`Error executing ${action.id}:`, error);
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            type: "error",
+            role: "system",
+            text: `Error executing ${action.name}: ${error}`,
+            step: "error",
+          })}\n\n`
+        )
+      );
+      return { success: false, action: action.id, params, error };
+    }
+  });
+
+  const results = await Promise.all(promises);
+
+  // Notify completion
+  const successCount = results.filter((r) => r.success).length;
+  controller.enqueue(
+    encoder.encode(
+      `data: ${JSON.stringify({
+        type: "text",
+        role: "assistant",
+        text: `\n**✅ Completed ${successCount}/${actions.length} parallel tasks**\n`,
+        step: "parallel-complete",
+      })}\n\n`
+    )
+  );
+
+  return results;
+}
+
+// Execute actions sequentially
+async function executeActionsSequentially(
+  actions: Array<{ action: ActionDefinition; params: string }>,
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder
+) {
+  if (actions.length === 0) return;
+
+  console.log(
+    `Executing ${actions.length} actions sequentially:`,
+    actions.map((a) => `${a.action.id}: ${a.params}`)
+  );
+
+  for (const { action, params } of actions) {
+    try {
+      await action.handler(params, controller, encoder);
+    } catch (error) {
+      console.error(`Error executing ${action.id}:`, error);
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            type: "error",
+            role: "system",
+            text: `Error executing ${action.name}: ${error}`,
+            step: "error",
+          })}\n\n`
+        )
+      );
+    }
+  }
 }
 
 // Helper: Stream DeepSeek R1 API (official, not AI SDK)
@@ -306,14 +474,13 @@ export async function POST(req: Request) {
         let r1Text = "";
         for await (const part of streamDeepseekR1(agentMessages, apiKey)) {
           if (part.type === "text") {
-            r1Text += part.text; // Only buffer answer text for substeps parsing
+            r1Text += part.text;
           }
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(part)}\n\n`)
           );
         }
 
-        // Log the full R1 output
         console.log("=== DeepSeek R1 FULL OUTPUT ===");
         console.log(r1Text);
 
@@ -326,42 +493,72 @@ export async function POST(req: Request) {
             .map((s) => s.trim())
             .filter(Boolean);
 
+          // Parse all actions first
+          const actionMatches: Array<{
+            action: ActionDefinition;
+            params: string;
+          }> = [];
+          const unknownActions: string[] = [];
+
           for (const stepLine of substepsRaw) {
             console.log("Processing substep:", stepLine);
-
             const actionMatch = findActionHandler(stepLine);
             if (actionMatch) {
-              const { action, params } = actionMatch;
-              console.log(`Executing ${action.id} with params:`, params);
-
-              try {
-                await action.handler(params, controller, encoder);
-              } catch (error) {
-                console.error(`Error executing ${action.id}:`, error);
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: "error",
-                      role: "system",
-                      text: `Error executing ${action.name}: ${error}`,
-                      step: "error",
-                    })}\n\n`
-                  )
-                );
-              }
+              actionMatches.push(actionMatch);
             } else {
-              console.log("Unknown action format:", stepLine);
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({
-                    type: "text",
-                    role: "assistant",
-                    text: `\n⚠️ Unknown action: ${stepLine}\n`,
-                    step: "warning",
-                  })}\n\n`
-                )
-              );
+              unknownActions.push(stepLine);
             }
+          }
+
+          // Report unknown actions
+          for (const unknownAction of unknownActions) {
+            console.log("Unknown action format:", unknownAction);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "text",
+                  role: "assistant",
+                  text: `\n⚠️ Unknown action: ${unknownAction}\n`,
+                  step: "warning",
+                })}\n\n`
+              )
+            );
+          }
+
+          // Group actions by execution type
+          const { parallelActions, sequentialActions } =
+            groupActionsByExecution(actionMatches);
+
+          // Execute parallel actions first (they're independent)
+          if (parallelActions.length > 0) {
+            await executeActionsInParallel(
+              parallelActions,
+              controller,
+              encoder
+            );
+          }
+
+          // Execute sequential actions (they might depend on previous results)
+          if (sequentialActions.length > 0) {
+            await executeActionsSequentially(
+              sequentialActions,
+              controller,
+              encoder
+            );
+          }
+
+          // Summary of execution
+          if (actionMatches.length > 0) {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "text",
+                  role: "assistant",
+                  text: `\n**🎯 Completed all ${actionMatches.length} tasks** (${parallelActions.length} parallel, ${sequentialActions.length} sequential)\n`,
+                  step: "completion-summary",
+                })}\n\n`
+              )
+            );
           }
         } else {
           console.log("=== NO <substeps> FOUND ===");
