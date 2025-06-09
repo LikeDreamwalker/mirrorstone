@@ -17,6 +17,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import { SubstepsCard } from "./substeps-card";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -204,6 +205,7 @@ export function ChatInterface({
                         </div>
                       ) : (
                         <div className="prose-container">
+                          {/* Render all assistant parts */}
                           {message.parts?.map((part, idx) => {
                             if (part.type === "text") {
                               return (
@@ -227,7 +229,6 @@ export function ChatInterface({
                                           Thoughts
                                         </AccordionTrigger>
                                       </CardHeader>
-
                                       <AccordionContent>
                                         <CardContent className="px-4 py-0 text-xs text-muted-foreground">
                                           {part.text}
@@ -238,7 +239,27 @@ export function ChatInterface({
                                 </Card>
                               );
                             }
-                            // Add more part types as needed
+                            return null;
+                          })}
+                          {message.toolInvocations?.map((toolInvocation) => {
+                            const { toolName, toolCallId, state, result } =
+                              toolInvocation;
+                            if (
+                              state === "result" &&
+                              toolName === "displaySubsteps"
+                            ) {
+                              return (
+                                <div key={toolCallId}>
+                                  <SubstepsCard substeps={result.substeps} />
+                                </div>
+                              );
+                            }
+                            // Optionally, show loading state for partial tool calls
+                            if (toolName === "displaySubsteps") {
+                              return (
+                                <div key={toolCallId}>Loading substeps...</div>
+                              );
+                            }
                             return null;
                           })}
                         </div>
