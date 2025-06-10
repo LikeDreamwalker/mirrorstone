@@ -120,6 +120,7 @@ class AI5MultiModelStreamComposer {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private sendUIMessage(part: any) {
     if (!this.controller) return;
     this.controller.enqueue(

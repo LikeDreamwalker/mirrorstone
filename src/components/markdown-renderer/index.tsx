@@ -259,7 +259,7 @@ function MarkdownBase({
                 : { action: line, params: "" };
             });
 
-          return <SubstepsCard substeps={substeps} />;
+          return <SubstepsCard substeps={substeps} className="my-2" />;
         }
 
         // If no language match is found, it's an inline code block

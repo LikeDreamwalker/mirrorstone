@@ -19,6 +19,12 @@ import { z } from "zod";
 //   },
 // });
 
+type BraveWebResult = {
+  title: string;
+  url: string;
+  description: string;
+};
+
 export const braveSearchTool = createTool({
   description: "Search the web for up-to-date information using Brave Search.",
   parameters: z.object({
@@ -43,11 +49,13 @@ export const braveSearchTool = createTool({
       const data = await res.json();
       return {
         results:
-          data.web?.results?.slice(0, 3).map((r: any) => ({
-            title: r.title,
-            url: r.url,
-            snippet: r.description,
-          })) ?? [],
+          (data.web?.results as BraveWebResult[] | undefined)
+            ?.slice(0, 3)
+            .map((r: BraveWebResult) => ({
+              title: r.title,
+              url: r.url,
+              snippet: r.description,
+            })) ?? [],
       };
     } catch (e) {
       return { error: "Search failed due to a network or server error." };

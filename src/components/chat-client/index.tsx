@@ -49,7 +49,7 @@ export default function ChatClient({ chatId }: { chatId: string }) {
       if (chatInitStatus === "default") {
         const chat = await getChatFromIndexedDB(chatId);
         if (cancelled) return;
-        let msgs = chat?.messages ?? [];
+        const msgs = chat?.messages ?? [];
 
         if (
           Array.isArray(msgs) &&
