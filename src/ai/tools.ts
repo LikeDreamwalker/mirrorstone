@@ -25,30 +25,33 @@ export const braveSearchTool = createTool({
     query: z.string().describe("The search query"),
   }),
   execute: async ({ query }) => {
-    const res = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
-        query
-      )}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "X-Subscription-Token": process.env.BRAVE_API_KEY!,
-        },
+    try {
+      const res = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
+          query
+        )}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "X-Subscription-Token": process.env.BRAVE_API_KEY!,
+          },
+        }
+      );
+      if (!res.ok) {
+        return { error: `Search failed with status ${res.status}` };
       }
-    );
-    if (!res.ok) {
-      throw new Error("Brave Search API error: " + res.status);
+      const data = await res.json();
+      return {
+        results:
+          data.web?.results?.slice(0, 3).map((r: any) => ({
+            title: r.title,
+            url: r.url,
+            snippet: r.description,
+          })) ?? [],
+      };
+    } catch (e) {
+      return { error: "Search failed due to a network or server error." };
     }
-    const data = await res.json();
-
-    return {
-      results:
-        data.web?.results?.slice(0, 3).map((r: any) => ({
-          title: r.title,
-          url: r.url,
-          snippet: r.description,
-        })) ?? [],
-    };
   },
 });
 
