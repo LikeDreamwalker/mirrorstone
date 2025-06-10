@@ -5,11 +5,6 @@ import { deepseek } from "@ai-sdk/deepseek";
 import type { UIMessage } from "ai";
 import { tools } from "@/ai/tools";
 
-// Helper to strip <substeps>...</substeps> from text
-function stripSubstepsBlocks(text: string): string {
-  return text.replace(/<substeps>[\s\S]*?<\/substeps>/gi, "");
-}
-
 // Helper: Remove reasoning parts from assistant messages
 function filterReasoningParts(messages: UIMessage[]): UIMessage[] {
   return messages.map((msg) => {
@@ -50,24 +45,24 @@ Today's date: ${NOW}
 IMPORTANT: Always respond in the same language as the user's input. If the user writes in Chinese, respond in Chinese. If in English, respond in English.
 
 When responding to user requests:
-- For simple questions, answer directly
-- For requests requiring current information or multiple steps, include a <substeps> section
+- For simple questions, answer directly.
+- For requests requiring current information or multiple steps, ONLY output the substeps in a special markdown code block (language "substeps"). DO NOT provide the final answer, summary, or any additional information. The next agent will execute the substeps.
 
-Keep your response concise. When using substeps, provide a brief acknowledgment and clear, actionable steps.
+Keep your response concise. When using substeps, provide a brief acknowledgment and then ONLY the substeps code block.
 
 Format for complex requests:
 Brief acknowledgment of the request.
 
-<substeps>
-1. Specific action needed
-2. Next specific action  
-3. Final action
-</substeps>
+\`\`\`substeps
+1. Step name: Specific action needed
+2. Step name: Next specific action  
+3. Step name: Final action
+\`\`\`
 
 Examples:
 - "Hello" → "Hello! How can I help you today?"
-- "最近AI Agent的新消息" → "我来为您查找最近AI Agent领域的最新动态。<substeps>1. Search for recent AI agent news and developments 2. Summarize key findings and breakthroughs 3. Present organized results with sources</substeps>"
-- "Build a todo app" → "I'll help you build a todo app. <substeps>1. Design the UI components 2. Set up state management 3. Implement CRUD operations</substeps>"
+- "最近AI Agent的新消息" → "我来为您查找最近AI Agent领域的最新动态。\`\`\`substeps\n1. Search recent news: Search for recent AI agent news and developments\n2. Summarize findings: Summarize key findings and breakthroughs\n3. Present results: Present organized results with sources\n\`\`\`"
+- "Build a todo app" → "I'll help you build a todo app. \`\`\`substeps\n1. Design UI: Design the UI components\n2. Setup state: Set up state management\n3. Implement CRUD: Implement CRUD operations\n\`\`\`"
 
 Keep substeps simple and actionable. Avoid over-planning or excessive detail.
 `.trim();
@@ -81,10 +76,9 @@ Today's date: ${NOW}
 IMPORTANT: Always respond in the same language as the user's original request. Match the language used in the conversation.
 
 Process:
-1. Call displaySubsteps tool with the provided substeps
-2. Immediately begin executing each substep without repeating or summarizing them
-3. Work through tasks efficiently using appropriate tools
-4. Provide final comprehensive results
+1. Immediately begin executing each substep without repeating or summarizing them
+2. Work through tasks efficiently using appropriate tools
+3. Provide final comprehensive results
 
 Search Guidelines:
 - Use searchWeb tool with focused, relevant queries
@@ -278,20 +272,18 @@ export async function POST(req: Request) {
         apiKey
       );
 
-      // Step 2: If R1 output contains <substeps>, invoke V3
-      const substepsMatch = r1Raw.match(/<substeps>([\s\S]*?)<\/substeps>/i);
+      // Step 2: If R1 output contains substeps, invoke V3
+      const substepsMatch = r1Raw.match(/```substeps([\s\S]*?)```/i);
       if (substepsMatch) {
         const substeps = substepsMatch[1].trim();
         // Format the message for V3
         const v3UserMessage = [
-          "Render a substep card containing the following steps:\n",
           substeps
             .split(/\r?\n/)
             .map((line) => line.trim())
             .filter((line) => line.length > 0)
             .map((line) => (line.match(/^\d+\./) ? line : `- ${line}`))
             .join("\n"),
-          "\nAfter displaying the substep card, please proceed to work through each substep in detail, providing comprehensive answers and solutions for each.",
         ].join("\n");
         const v3Prompt: UIMessage[] = [
           {

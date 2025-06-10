@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ExternalLink, ImageOff } from "lucide-react";
 import Image from "next/image";
+import { SubstepsCard } from "@/components/chat-interface/substeps-card";
 
 // Base component implementation
 function MarkdownBase({
@@ -241,6 +242,25 @@ function MarkdownBase({
       code: ({ className, children, ...props }) => {
         // Check if this is a code block with a language specified
         const match = /language-(\w+)/.exec(className || "");
+
+        // Detect ```substeps code blocks
+        if (className === "language-substeps") {
+          // Parse substeps from children (string)
+          const substepsText = (children ?? "").toString();
+          const substeps = substepsText
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => /^\d+\./.test(line))
+            .map((line) => {
+              // Split "1. Action: params"
+              const match = line.match(/^\d+\.\s*(.*?)(?::\s*(.*))?$/);
+              return match
+                ? { action: match[1] || "", params: match[2] || "" }
+                : { action: line, params: "" };
+            });
+
+          return <SubstepsCard substeps={substeps} />;
+        }
 
         // If no language match is found, it's an inline code block
         if (!match && children) {
