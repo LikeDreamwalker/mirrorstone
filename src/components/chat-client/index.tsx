@@ -33,6 +33,7 @@ export default function ChatClient({ chatId }: { chatId: string }) {
     onFinish: async () => {
       if (chatId) {
         await saveChatToIndexedDB(chatId, messagesRef.current);
+        console.log(messagesRef.current, "Chat saved to IndexedDB");
       }
     },
   });

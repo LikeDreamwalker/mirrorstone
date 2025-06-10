@@ -204,6 +204,7 @@ export function ChatInterface({
                           )}
                         </div>
                       ) : (
+                        // Assistant
                         <div className="prose-container">
                           {/* Render all assistant parts */}
                           {message.parts?.map((part, idx) => {
@@ -239,27 +240,29 @@ export function ChatInterface({
                                 </Card>
                               );
                             }
-                            return null;
-                          })}
-                          {message.toolInvocations?.map((toolInvocation) => {
-                            const { toolName, toolCallId, state, result } =
-                              toolInvocation;
-                            if (
-                              state === "result" &&
-                              toolName === "displaySubsteps"
-                            ) {
-                              return (
-                                <div key={toolCallId}>
-                                  <SubstepsCard substeps={result.substeps} />
-                                </div>
-                              );
+                            if (part.type === "tool-invocation") {
+                              const { toolName, toolCallId, state, args } =
+                                part.toolInvocation;
+                              if (
+                                state === "result" &&
+                                toolName === "displaySubsteps"
+                              ) {
+                                return (
+                                  <div key={toolCallId}>
+                                    <SubstepsCard substeps={args.substeps} />
+                                  </div>
+                                );
+                              }
+                              if (toolName === "displaySubsteps") {
+                                return (
+                                  <div key={toolCallId}>
+                                    Loading substeps...
+                                  </div>
+                                );
+                              }
+                              return null;
                             }
-                            // Optionally, show loading state for partial tool calls
-                            if (toolName === "displaySubsteps") {
-                              return (
-                                <div key={toolCallId}>Loading substeps...</div>
-                              );
-                            }
+
                             return null;
                           })}
                         </div>

@@ -15,6 +15,7 @@ export const substepsTool = createTool({
   }),
   // This is a dummy execute, you can adapt as needed
   execute: async function ({ substeps }) {
+    console.log("Executing substeps tool with:", substeps);
     return { substeps };
   },
 });
