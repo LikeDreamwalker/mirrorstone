@@ -78,7 +78,7 @@ export function ChatInterface({
       // Thinking bubble
       return (
         <div className="flex gap-3 justify-start">
-          <div className="flex gap-3 max-w-[85%]">
+          <div className="flex gap-3 w-[85%]">
             <div className="shrink-0">
               <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
@@ -109,7 +109,7 @@ export function ChatInterface({
     if (status === "error") {
       return (
         <div className="flex gap-3 justify-start">
-          <div className="flex gap-3 max-w-[85%]">
+          <div className="flex gap-3 w-[85%]">
             <div className="shrink-0">
               <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center">
                 <Bot className="h-4 w-4 text-white" />
@@ -173,8 +173,10 @@ export function ChatInterface({
                   }`}
                 >
                   <div
-                    className={`flex gap-3 max-w-[85%] ${
-                      message.role === "user" ? "flex-row-reverse" : "flex-row"
+                    className={`flex gap-3 w-[85%] transition ${
+                      message.role === "user"
+                        ? "flex-row-reverse max-w-[85%] w-auto"
+                        : "flex-row"
                     }`}
                   >
                     <div className="shrink-0">
@@ -248,7 +250,7 @@ export function ChatInterface({
                                 toolName === "displaySubsteps"
                               ) {
                                 return (
-                                  <div key={toolCallId}>
+                                  <div key={toolCallId} className="my-2">
                                     <SubstepsCard substeps={args.substeps} />
                                   </div>
                                 );
