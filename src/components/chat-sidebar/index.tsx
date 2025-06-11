@@ -159,46 +159,48 @@ export function ChatSidebar() {
             <ScrollArea className="h-[400px]">
               <SidebarMenu>
                 {validChats.map((chat) => (
-                  <SidebarMenuItem
-                    key={chat.id}
-                    className="flex items-center group transition"
-                  >
-                    <SidebarMenuButton
-                      onClick={() => handleLoadChat(chat)}
-                      isActive={currentChatId === chat.id}
-                      className="flex-1 flex items-center min-w-0"
-                    >
-                      <MessageSquare className="size-4 shrink-0 mr-2" />
-                      <div className="truncate text-sm font-medium">
-                        {formatChatTitle(chat)}
-                      </div>
-                      <div className="text-xs text-muted-foreground ml-2">
-                        {formatDate(chat.timestamp)}
-                      </div>
-                    </SidebarMenuButton>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="ml-1"
-                          tabIndex={0}
-                          aria-label="Chat actions"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent side="right" align="start">
-                        <DropdownMenuItem
-                          onClick={(e) => handleDeleteChat(chat.id, e)}
-                          disabled={deletingChatId === chat.id}
-                          className="text-red-600 focus:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          <span>Delete Chat</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <SidebarMenuItem key={chat.id}>
+                    <div className="flex items-center w-full">
+                      <SidebarMenuButton
+                        onClick={() => handleLoadChat(chat)}
+                        isActive={currentChatId === chat.id}
+                        className="flex-1 min-w-0 justify-start cursor-pointer"
+                      >
+                        <MessageSquare className="h-4 w-4 shrink-0" />
+                        <div className="flex items-center justify-between min-w-0 flex-1 ml-2 gap-2">
+                          <div className="truncate text-sm min-w-0">
+                            {formatChatTitle(chat)}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-thin shrink-0">
+                            {formatDate(chat.timestamp)}
+                          </div>
+                        </div>
+                      </SidebarMenuButton>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Chat actions"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="right" align="start">
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            disabled={deletingChatId === chat.id}
+                            className="text-red-600 focus:text-red-700 dark:text-red-400 dark:focus:text-red-300"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            <span>Delete Chat</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
