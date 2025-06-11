@@ -1,4 +1,4 @@
-import type { ChatHistory } from "./types";
+import type { ChatHistory, Message } from "./types";
 
 const DB_NAME = "MirrorStoneDB";
 const DB_VERSION = 1;
@@ -23,7 +23,7 @@ export function openDB(): Promise<IDBDatabase> {
 
 export async function saveChatToIndexedDB(
   chatId: string,
-  messages: ChatHistory["messages"]
+  messages: Message[]
 ): Promise<void> {
   try {
     // Don't save empty chats
@@ -111,15 +111,16 @@ export async function cleanupDuplicateChats(): Promise<void> {
       request.onerror = () => reject(request.error);
     });
 
-    // Group chats by first message content and timestamp (within 1 minute)
+    // Group chats by first user message text and timestamp (within 1 minute)
     const duplicateGroups = new Map<string, ChatHistory[]>();
 
     allChats.forEach((chat) => {
       if (chat.messages.length > 0) {
-        const firstMessage =
-          chat.messages.find((m) => m.role === "user")?.content || "";
+        const firstUserMsg = chat.messages.find((m) => m.role === "user");
+        const firstMessageText =
+          firstUserMsg?.parts?.find((part) => part.type === "text")?.text || "";
         const timeKey = Math.floor(chat.timestamp / 60000); // Group by minute
-        const key = `${firstMessage}_${timeKey}`;
+        const key = `${firstMessageText}_${timeKey}`;
 
         if (!duplicateGroups.has(key)) {
           duplicateGroups.set(key, []);

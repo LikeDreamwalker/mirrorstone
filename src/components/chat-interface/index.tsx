@@ -1,25 +1,30 @@
 "use client";
 
 import type React from "react";
-
-import { useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatStatus } from "@/components/chat-status";
 import { Send, User, Bot, Copy, Check, Sparkles } from "lucide-react";
-import type { Message } from "ai";
-import { useState } from "react";
+import type { Message } from "@/lib/types";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import { SubstepsCard } from "./substeps-card";
 
 interface ChatInterfaceProps {
   messages: Message[];
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  isLoading: boolean;
+  status: "submitted" | "streaming" | "ready" | "error";
   hasInitialQuery?: boolean;
 }
 
@@ -28,19 +33,30 @@ export function ChatInterface({
   input,
   handleInputChange,
   handleSubmit,
-  isLoading,
+  status,
   hasInitialQuery,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  // Track previous messages length and last message role
+  const prevMessagesRef = useRef<{ length: number; lastRole: string | null }>({
+    length: messages.length,
+    lastRole: messages.length > 0 ? messages[messages.length - 1].role : null,
+  });
 
-  // useEffect(() => {
-  //   scrollToBottom();
-  // }, [messages]);
+  useEffect(() => {
+    const prev = prevMessagesRef.current;
+    const lastMsg = messages[messages.length - 1];
+    // Only scroll if a new user message is added
+    if (messages.length > prev.length && lastMsg && lastMsg.role === "user") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMessagesRef.current = {
+      length: messages.length,
+      lastRole: lastMsg ? lastMsg.role : null,
+    };
+  }, [messages]);
 
   const copyToClipboard = async (text: string, messageId: string) => {
     try {
@@ -51,6 +67,65 @@ export function ChatInterface({
       console.error("Failed to copy text:", error);
     }
   };
+
+  // Memoized rendering for status
+  const statusBlock = (() => {
+    if (
+      status === "submitted" &&
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "user"
+    ) {
+      // Thinking bubble
+      return (
+        <div className="flex gap-3 justify-start">
+          <div className="flex gap-3 w-[85%]">
+            <div className="shrink-0">
+              <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <Card className="p-4 bg-card border">
+              <div className="flex items-center gap-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  MirrorStone is thinking...
+                </span>
+              </div>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    if (status === "error") {
+      return (
+        <div className="flex gap-3 justify-start">
+          <div className="flex gap-3 w-[85%]">
+            <div className="shrink-0">
+              <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <Card className="p-4 bg-card border">
+              <span className="text-sm text-red-600">
+                Sorry, something went wrong. Please try again.
+              </span>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  })();
 
   return (
     <div className="flex flex-col h-screen">
@@ -69,7 +144,7 @@ export function ChatInterface({
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
-          {messages.length === 0 && !isLoading ? (
+          {messages.length === 0 && status === "ready" ? (
             <div className="text-center py-12">
               <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium mb-2">
@@ -82,95 +157,141 @@ export function ChatInterface({
               </p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+            messages.map((message) => {
+              // Gather all text parts for copy button
+              const textToCopy =
+                message.parts
+                  ?.filter((part) => part.type === "text")
+                  .map((part) => part.text)
+                  .join("\n") ?? "";
+
+              return (
                 <div
-                  className={`flex gap-3 max-w-[85%] ${
-                    message.role === "user" ? "flex-row-reverse" : "flex-row"
+                  key={message.id}
+                  className={`flex gap-3 ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <div className="shrink-0">
-                    {message.role === "user" ? (
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <Card
-                    className={`p-4 relative group ${
+                  <div
+                    className={`flex gap-3 w-[85%] transition ${
                       message.role === "user"
-                        ? "bg-blue-600 text-white"
-                        : "bg-card border"
+                        ? "flex-row-reverse max-w-[85%] w-auto"
+                        : "flex-row"
                     }`}
                   >
-                    {message.role === "user" ? (
-                      <div className="whitespace-pre-wrap text-white">
-                        {message.content}
-                      </div>
-                    ) : (
-                      <div className="prose-container">
-                        <MarkdownRenderer content={message.content} />
-                      </div>
-                    )}
-                    {message.role === "assistant" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
-                        onClick={() =>
-                          copyToClipboard(message.content, message.id)
-                        }
-                      >
-                        {copiedMessageId === message.id ? (
-                          <Check className="h-3 w-3" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
-                    )}
-                  </Card>
-                </div>
-              </div>
-            ))
-          )}
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <div className="flex gap-3 max-w-[85%]">
-                <div className="shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-                    <Bot className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-                <Card className="p-4 bg-card border">
-                  <div className="flex items-center gap-2">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
+                    <div className="shrink-0">
+                      {message.role === "user" ? (
+                        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                          <User className="h-4 w-4 text-white" />
+                        </div>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                          <Bot className="h-4 w-4 text-white" />
+                        </div>
+                      )}
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      MirrorStone is thinking...
-                    </span>
+                    <Card
+                      className={`p-4 relative group w-full ${
+                        message.role === "user"
+                          ? "bg-blue-600 text-white"
+                          : "bg-card border"
+                      }`}
+                    >
+                      {message.role === "user" ? (
+                        <div className="whitespace-pre-wrap text-white">
+                          {message.parts?.map((part, idx) =>
+                            part.type === "text" ? (
+                              <span key={idx}>{part.text}</span>
+                            ) : null
+                          )}
+                        </div>
+                      ) : (
+                        // Assistant
+                        <div className="prose-container">
+                          {/* Render all assistant parts */}
+                          {message.parts?.map((part, idx) => {
+                            if (part.type === "text") {
+                              return (
+                                <MarkdownRenderer
+                                  key={idx}
+                                  content={part.text}
+                                />
+                              );
+                            }
+                            if (part.type === "reasoning") {
+                              return (
+                                <Card key={idx} className="p-0 mb-2">
+                                  <Accordion
+                                    type="single"
+                                    collapsible
+                                    defaultValue="reasoning"
+                                  >
+                                    <AccordionItem value="reasoning">
+                                      <CardHeader className="px-4 py-0">
+                                        <AccordionTrigger className="text-sm font-semibold">
+                                          Thoughts
+                                        </AccordionTrigger>
+                                      </CardHeader>
+                                      <AccordionContent>
+                                        <CardContent className="px-4 py-0 text-xs text-muted-foreground">
+                                          {part.text}
+                                        </CardContent>
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  </Accordion>
+                                </Card>
+                              );
+                            }
+                            if (part.type === "tool-invocation") {
+                              const { toolName, toolCallId, state, args } =
+                                part.toolInvocation;
+                              if (
+                                state === "result" &&
+                                toolName === "displaySubsteps"
+                              ) {
+                                return (
+                                  <div key={toolCallId} className="my-2">
+                                    <SubstepsCard substeps={args.substeps} />
+                                  </div>
+                                );
+                              }
+                              if (toolName === "displaySubsteps") {
+                                return (
+                                  <div key={toolCallId}>
+                                    Loading substeps...
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }
+
+                            return null;
+                          })}
+                        </div>
+                      )}
+                      {message.role === "assistant" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
+                          onClick={() =>
+                            copyToClipboard(textToCopy, message.id)
+                          }
+                        >
+                          {copiedMessageId === message.id ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
+                    </Card>
                   </div>
-                </Card>
-              </div>
-            </div>
+                </div>
+              );
+            })
           )}
+          {statusBlock}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
@@ -184,9 +305,16 @@ export function ChatInterface({
               onChange={handleInputChange}
               placeholder="Ask MirrorStone anything..."
               className="flex-1"
-              disabled={isLoading}
+              disabled={status === "streaming" || status === "submitted"}
             />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                status === "streaming" ||
+                status === "submitted" ||
+                !input.trim()
+              }
+            >
               <Send className="h-4 w-4" />
             </Button>
           </div>

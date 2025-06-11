@@ -28,7 +28,7 @@ export default function LandingInput() {
       {
         id: messageId,
         role: "user",
-        content: query.trim(),
+        parts: [{ type: "text", text: query.trim() }], // ✅ This is v5 style!
       },
     ]);
     router.push(`/${chatId}`);
@@ -50,21 +50,26 @@ export default function LandingInput() {
             disabled={isNavigating}
           />
         </div>
-        <Button
-          type="submit"
-          size="lg"
-          className="mt-4 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg"
-          disabled={!query.trim() || isNavigating}
-        >
-          {isNavigating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Starting Search...
-            </>
-          ) : (
-            "Start Searching"
-          )}
-        </Button>
+        <div className="flex w-full justify-between items-center p-1">
+          <p className="text-muted-foreground text-sm">
+            WIP and still building
+          </p>
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-4 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+            disabled={!query.trim() || isNavigating}
+          >
+            {isNavigating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Starting Search...
+              </>
+            ) : (
+              "Start Searching"
+            )}
+          </Button>
+        </div>
       </div>
     </form>
   );
