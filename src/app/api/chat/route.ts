@@ -1,4 +1,4 @@
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";

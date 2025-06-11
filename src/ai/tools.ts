@@ -1,23 +1,6 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
-
-// export const substepsTool = createTool({
-//   description: "Display substeps for a complex question",
-//   parameters: z.object({
-//     substeps: z
-//       .array(
-//         z.object({
-//           action: z.string(),
-//           params: z.string(),
-//         })
-//       )
-//       .describe("The list of substeps, each with action and params"),
-//   }),
-//   // This is a dummy execute, you can adapt as needed
-//   execute: async function ({ substeps }) {
-//     return { substeps };
-//   },
-// });
+import { RateLimitTracker } from "../lib/rate-limit-tracker";
 
 type BraveWebResult = {
   title: string;
@@ -31,14 +14,31 @@ export const braveSearchTool = createTool({
     query: z.string().describe("The search query"),
   }),
   execute: async ({ query }) => {
-    console.log("🔍 Brave Search - Starting search for query:", query);
-    console.log("🔑 API Key exists:", !!process.env.BRAVE_API_KEY);
-
     try {
+      // 🛡️ Check global rate limit BEFORE making request
+      if (RateLimitTracker.isRateLimited()) {
+        const info = RateLimitTracker.getUsageInfo();
+        console.log(
+          `⚠️ Rate limit exceeded: ${info.used}/${info.limit} searches used`
+        );
+
+        // Return empty results to model (as requested - just tell model we found nothing)
+        return {
+          results: [],
+          message: "Search quota exceeded - no results available",
+        };
+      }
+
+      console.log(`🔍 Brave Search - Query: "${query}"`);
+      console.log(
+        `📊 Current usage before search: ${
+          RateLimitTracker.getUsageInfo().used
+        }/1000`
+      );
+
       const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
         query
       )}`;
-      console.log("📡 Request URL:", url);
 
       const res = await fetch(url, {
         headers: {
@@ -47,24 +47,21 @@ export const braveSearchTool = createTool({
         },
       });
 
-      console.log("📊 Response status:", res.status);
-      console.log("📊 Response statusText:", res.statusText);
-      console.log(
-        "📊 Response headers:",
-        Object.fromEntries(res.headers.entries())
-      );
+      // 🌊 Update global state with EVERY response (success or failure)
+      RateLimitTracker.updateFromBraveResponse(res);
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("❌ Request failed with status:", res.status);
-        console.error("❌ Error response body:", errorText);
+        console.error("❌ Brave API failed:", res.status, errorText);
+
+        // Return empty results instead of error to avoid breaking the model
         return {
-          error: `Search failed with status ${res.status}: ${errorText}`,
+          results: [],
+          message: "Search temporarily unavailable - no results found",
         };
       }
 
       const data = await res.json();
-      console.log("✅ Raw API response:", JSON.stringify(data, null, 2));
 
       const results =
         (data.web?.results as BraveWebResult[] | undefined)
@@ -75,18 +72,21 @@ export const braveSearchTool = createTool({
             snippet: r.description,
           })) ?? [];
 
-      console.log("🎯 Processed results count:", results.length);
-      console.log("🎯 Processed results:", results);
+      // Log current state after successful search
+      const currentInfo = RateLimitTracker.getUsageInfo();
+      console.log(
+        `📊 Post-search usage: ${currentInfo.used}/${currentInfo.limit} (${currentInfo.percentage}%)`
+      );
 
       return { results };
     } catch (e) {
       console.error("💥 Brave Search error:", e);
-      console.error("💥 Error details:", {
-        name: (e as Error).name,
-        message: (e as Error).message,
-        stack: (e as Error).stack,
-      });
-      return { error: "Search failed due to a network or server error." };
+
+      // Return empty results instead of error
+      return {
+        results: [],
+        message: "Search failed - no results available",
+      };
     }
   },
 });
@@ -102,8 +102,6 @@ export const webScrapeTool = createTool({
   }),
   execute: async ({ url, selector }) => {
     try {
-      console.log("🌐 Web Scraper - Fetching:", url);
-
       const response = await fetch(url, {
         headers: {
           "User-Agent":
@@ -117,7 +115,7 @@ export const webScrapeTool = createTool({
 
       const html = await response.text();
 
-      // Basic text extraction (you can enhance this with a proper HTML parser)
+      // Basic text extraction
       let content = html
         .replace(/<script[^>]*>.*?<\/script>/gis, "")
         .replace(/<style[^>]*>.*?<\/style>/gis, "")
@@ -125,7 +123,7 @@ export const webScrapeTool = createTool({
         .replace(/\s+/g, " ")
         .trim();
 
-      // Limit content length to avoid overwhelming the model
+      // Limit content length
       if (content.length > 3000) {
         content = content.substring(0, 3000) + "...";
       }
@@ -139,7 +137,6 @@ export const webScrapeTool = createTool({
 });
 
 export const tools = {
-  // displaySubsteps: substepsTool,
   onlineSearch: braveSearchTool,
-  webScrapeTool,
+  fetchWebPage: webScrapeTool,
 };
