@@ -18,6 +18,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { SubstepsCard } from "./substeps-card";
+import { StreamRenderer } from "@/components/block-renderer";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -38,6 +39,8 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [showBlockRenderer, setShowBlockRenderer] = useState(false);
+  const [blockRendererKey, setBlockRendererKey] = useState(0);
 
   // Track previous messages length and last message role
   const prevMessagesRef = useRef<{ length: number; lastRole: string | null }>({
@@ -51,12 +54,28 @@ export function ChatInterface({
     // Only scroll if a new user message is added
     if (messages.length > prev.length && lastMsg && lastMsg.role === "user") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+      // Show block renderer when user sends a message
+      setShowBlockRenderer(true);
+      // Reset block renderer for new conversation
+      setBlockRendererKey((prev) => prev + 1);
     }
     prevMessagesRef.current = {
       length: messages.length,
       lastRole: lastMsg ? lastMsg.role : null,
     };
   }, [messages]);
+
+  // Hide block renderer when conversation is complete
+  useEffect(() => {
+    if (status === "ready" && showBlockRenderer) {
+      // Keep showing for a bit after completion, then hide
+      const timer = setTimeout(() => {
+        setShowBlockRenderer(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [status, showBlockRenderer]);
 
   const copyToClipboard = async (text: string, messageId: string) => {
     try {
@@ -157,140 +176,197 @@ export function ChatInterface({
               </p>
             </div>
           ) : (
-            messages.map((message) => {
-              // Gather all text parts for copy button
-              const textToCopy =
-                message.parts
-                  ?.filter((part) => part.type === "text")
-                  .map((part) => part.text)
-                  .join("\n") ?? "";
+            <>
+              {/* Historical Messages */}
+              {messages.map((message) => {
+                // Gather all text parts for copy button
+                const textToCopy =
+                  message.parts
+                    ?.filter((part) => part.type === "text")
+                    .map((part) => part.text)
+                    .join("\n") ?? "";
 
-              return (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
+                return (
                   <div
-                    className={`flex gap-3 w-[85%] transition ${
-                      message.role === "user"
-                        ? "flex-row-reverse max-w-[85%] w-auto"
-                        : "flex-row"
+                    key={message.id}
+                    className={`flex gap-3 ${
+                      message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
-                    <div className="shrink-0">
-                      {message.role === "user" ? (
-                        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                          <User className="h-4 w-4 text-white" />
-                        </div>
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <Card
-                      className={`p-4 relative group w-full ${
+                    <div
+                      className={`flex gap-3 w-[85%] transition ${
                         message.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-card border"
+                          ? "flex-row-reverse max-w-[85%] w-auto"
+                          : "flex-row"
                       }`}
                     >
-                      {message.role === "user" ? (
-                        <div className="whitespace-pre-wrap text-white">
-                          {message.parts?.map((part, idx) =>
-                            part.type === "text" ? (
-                              <span key={idx}>{part.text}</span>
-                            ) : null
-                          )}
-                        </div>
-                      ) : (
-                        // Assistant
-                        <div className="prose-container">
-                          {/* Render all assistant parts */}
-                          {message.parts?.map((part, idx) => {
-                            if (part.type === "text") {
-                              return (
-                                <MarkdownRenderer
-                                  key={idx}
-                                  content={part.text}
-                                />
-                              );
-                            }
-                            if (part.type === "reasoning") {
-                              return (
-                                <Card key={idx} className="p-0 mb-2">
-                                  <Accordion
-                                    type="single"
-                                    collapsible
-                                    defaultValue="reasoning"
-                                  >
-                                    <AccordionItem value="reasoning">
-                                      <CardHeader className="px-4 py-0">
-                                        <AccordionTrigger className="text-sm font-semibold">
-                                          Thoughts
-                                        </AccordionTrigger>
-                                      </CardHeader>
-                                      <AccordionContent>
-                                        <CardContent className="px-4 py-0 text-xs text-muted-foreground">
-                                          {part.text}
-                                        </CardContent>
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  </Accordion>
-                                </Card>
-                              );
-                            }
-                            if (part.type === "tool-invocation") {
-                              const { toolName, toolCallId, state, args } =
-                                part.toolInvocation;
-                              if (
-                                state === "result" &&
-                                toolName === "displaySubsteps"
-                              ) {
+                      <div className="shrink-0">
+                        {message.role === "user" ? (
+                          <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                            <Bot className="h-4 w-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <Card
+                        className={`p-4 relative group w-full ${
+                          message.role === "user"
+                            ? "bg-blue-600 text-white"
+                            : "bg-card border"
+                        }`}
+                      >
+                        {message.role === "user" ? (
+                          <div className="whitespace-pre-wrap text-white">
+                            {message.parts?.map((part, idx) =>
+                              part.type === "text" ? (
+                                <span key={idx}>{part.text}</span>
+                              ) : null
+                            )}
+                          </div>
+                        ) : (
+                          // Assistant
+                          <div className="prose-container">
+                            {/* Render all assistant parts */}
+                            {message.parts?.map((part, idx) => {
+                              if (part.type === "text") {
                                 return (
-                                  <div key={toolCallId} className="my-2">
-                                    <SubstepsCard substeps={args.substeps} />
-                                  </div>
+                                  <MarkdownRenderer
+                                    key={idx}
+                                    content={part.text}
+                                  />
                                 );
                               }
-                              if (toolName === "displaySubsteps") {
+                              if (part.type === "reasoning") {
                                 return (
-                                  <div key={toolCallId}>
-                                    Loading substeps...
-                                  </div>
+                                  <Card key={idx} className="p-0 mb-2">
+                                    <Accordion
+                                      type="single"
+                                      collapsible
+                                      defaultValue="reasoning"
+                                    >
+                                      <AccordionItem value="reasoning">
+                                        <CardHeader className="px-4 py-0">
+                                          <AccordionTrigger className="text-sm font-semibold">
+                                            🧠 Reasoning Process
+                                          </AccordionTrigger>
+                                        </CardHeader>
+                                        <AccordionContent>
+                                          <CardContent className="px-4 py-0 text-xs text-muted-foreground whitespace-pre-wrap">
+                                            {part.text}
+                                          </CardContent>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    </Accordion>
+                                  </Card>
                                 );
                               }
-                              return null;
-                            }
+                              if (part.type === "tool-invocation") {
+                                const { toolName, toolCallId, state, args } =
+                                  part.toolInvocation;
+                                if (
+                                  state === "result" &&
+                                  toolName === "displaySubsteps"
+                                ) {
+                                  return (
+                                    <div key={toolCallId} className="my-2">
+                                      <SubstepsCard substeps={args.substeps} />
+                                    </div>
+                                  );
+                                }
+                                if (toolName === "displaySubsteps") {
+                                  return (
+                                    <div key={toolCallId}>
+                                      Loading substeps...
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }
 
-                            return null;
-                          })}
+                              return null;
+                            })}
+                          </div>
+                        )}
+                        {message.role === "assistant" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
+                            onClick={() =>
+                              copyToClipboard(textToCopy, message.id)
+                            }
+                          >
+                            {copiedMessageId === message.id ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        )}
+                      </Card>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Live Block Renderer for Current Response */}
+              {showBlockRenderer && (
+                <div className="flex gap-3 justify-start">
+                  <div className="flex gap-3 w-[85%]">
+                    <div className="shrink-0">
+                      <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center">
+                        <Bot className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                    <Card className="p-4 bg-card border w-full">
+                      <StreamRenderer
+                        key={blockRendererKey}
+                        className="min-h-4"
+                        enableDebug={process.env.NODE_ENV === "development"}
+                        onComponentUpdate={(componentId, state) => {
+                          // Optional: Handle component updates
+                          console.log(
+                            `Component ${componentId} updated:`,
+                            state.status
+                          );
+                        }}
+                        onError={(error, componentId) => {
+                          console.error(
+                            `Block renderer error in ${componentId}:`,
+                            error
+                          );
+                        }}
+                      />
+
+                      {/* Status indicator overlay */}
+                      {status === "streaming" && (
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                          <div className="flex space-x-1">
+                            <div className="w-1.5 h-1.5 bg-purple-600 rounded-full animate-pulse"></div>
+                            <div
+                              className="w-1.5 h-1.5 bg-purple-600 rounded-full animate-pulse"
+                              style={{ animationDelay: "0.2s" }}
+                            ></div>
+                            <div
+                              className="w-1.5 h-1.5 bg-purple-600 rounded-full animate-pulse"
+                              style={{ animationDelay: "0.4s" }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            Streaming response...
+                          </span>
                         </div>
-                      )}
-                      {message.role === "assistant" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 hover:bg-muted"
-                          onClick={() =>
-                            copyToClipboard(textToCopy, message.id)
-                          }
-                        >
-                          {copiedMessageId === message.id ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
                       )}
                     </Card>
                   </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
+
           {statusBlock}
           <div ref={messagesEndRef} />
         </div>
