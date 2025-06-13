@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,9 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
-  PlayCircle,
 } from "lucide-react";
 import type { SubstepsBlock } from "./types";
+import { TextBlockComponent } from "./text";
 
 interface SubstepsBlockProps {
   block: SubstepsBlock;
@@ -50,19 +50,6 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
         return "border-blue-200 bg-blue-50/60 ring-2 ring-blue-200/50 animate-pulse";
       default:
         return "border-gray-200 bg-gray-50/30";
-    }
-  };
-
-  const getStepDescriptionClassName = (stepIndex: number) => {
-    const stepStatus = getStepStatus(stepIndex);
-
-    switch (stepStatus) {
-      case "completed":
-        return "text-green-800 font-medium";
-      case "current":
-        return "text-blue-800 font-semibold";
-      default:
-        return "text-muted-foreground";
     }
   };
 
@@ -117,9 +104,11 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
         <ListOrdered className="size-4 text-blue-600" />
         <AlertDescription>
           <div className="flex items-center justify-between mb-3">
-            <span className="font-semibold text-blue-700">
-              Planning execution steps...
-            </span>
+            <TextBlockComponent
+              content="**Planning execution steps...**"
+              status="finished"
+              className="font-semibold text-blue-700 m-0"
+            />
             <Loader2 className="size-4 text-blue-600 animate-spin" />
           </div>
           <div className="space-y-3">
@@ -145,7 +134,11 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ListOrdered className="size-4 text-blue-600" />
-            <span className="font-semibold text-blue-700">Execution Steps</span>
+            <TextBlockComponent
+              content="**Execution Steps**"
+              status="finished"
+              className="font-semibold text-blue-700 m-0"
+            />
             <Badge variant="outline" className="text-xs">
               {Math.min((currentStep ?? 0) + 1, steps.length)}/{steps.length}
             </Badge>
@@ -167,10 +160,17 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
             }}
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>
-              {status === "running" && "Executing..."}
-              {status === "finished" && "All steps completed"}
-            </span>
+            <TextBlockComponent
+              content={
+                status === "running"
+                  ? "Executing..."
+                  : status === "finished"
+                  ? "All steps completed"
+                  : ""
+              }
+              status="finished"
+              className="m-0"
+            />
             <span className="font-mono">{getProgressPercentage()}%</span>
           </div>
         </div>
@@ -194,9 +194,15 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
               }}
             >
               {getStepIcon(idx)}
-              <AlertTitle className={getStepDescriptionClassName(idx)}>
+              <AlertDescription>
                 <div className="flex items-center justify-between">
-                  <span className="leading-relaxed">{step}</span>
+                  <div className="flex-1">
+                    <TextBlockComponent
+                      content={step}
+                      status="finished"
+                      className="m-0"
+                    />
+                  </div>
 
                   {/* Step indicators */}
                   <div className="flex-shrink-0 ml-3">
@@ -221,7 +227,7 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
                     )}
                   </div>
                 </div>
-              </AlertTitle>
+              </AlertDescription>
             </Alert>
           ))}
         </div>

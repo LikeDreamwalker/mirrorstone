@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TextBlockComponent } from "./text";
 
 interface CardBlockProps {
   block: CardBlock;
@@ -34,12 +35,28 @@ export function CardBlockComponent({ block }: CardBlockProps) {
     );
   }
 
-  if (status === "update") {
+  if (status === "running") {
     return (
       <Card className="my-4">
         <CardHeader>
-          {title && <CardTitle>{title}</CardTitle>}
-          {description && <CardDescription>{description}</CardDescription>}
+          {title && (
+            <CardTitle>
+              <TextBlockComponent
+                content={title}
+                status="finished"
+                className="m-0"
+              />
+            </CardTitle>
+          )}
+          {description && (
+            <CardDescription>
+              <TextBlockComponent
+                content={description}
+                status="finished"
+                className="m-0"
+              />
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-4">
@@ -54,15 +71,35 @@ export function CardBlockComponent({ block }: CardBlockProps) {
   return (
     <Card className="my-4">
       <CardHeader>
-        {title && <CardTitle>{title}</CardTitle>}
-        {description && <CardDescription>{description}</CardDescription>}
+        {title && (
+          <CardTitle>
+            <TextBlockComponent
+              content={title}
+              status="finished"
+              className="m-0"
+            />
+          </CardTitle>
+        )}
+        {description && (
+          <CardDescription>
+            <TextBlockComponent
+              content={description}
+              status="finished"
+              className="m-0"
+            />
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent>
-        {content && <div className="whitespace-pre-wrap">{content}</div>}
+        {content && <TextBlockComponent content={content} status="finished" />}
         {data && componentType === "chart" && (
           <div className="h-64 bg-muted/20 rounded flex items-center justify-center">
-            [Chart Component with data: {JSON.stringify(data).substring(0, 50)}
-            ...]
+            <TextBlockComponent
+              content={`Chart Component with data: ${JSON.stringify(
+                data
+              ).substring(0, 50)}...`}
+              status="finished"
+            />
           </div>
         )}
       </CardContent>
