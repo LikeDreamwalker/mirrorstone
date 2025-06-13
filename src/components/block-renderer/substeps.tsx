@@ -1,8 +1,18 @@
 "use client";
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ListOrdered, Clock, CheckCircle, Play, Loader2 } from "lucide-react";
+import {
+  ListOrdered,
+  Clock,
+  CheckCircle,
+  Loader2,
+  AlertCircle,
+  PlayCircle,
+} from "lucide-react";
 import type { SubstepsBlock } from "./types";
 
 interface SubstepsBlockProps {
@@ -22,42 +32,37 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
     const stepStatus = getStepStatus(stepIndex);
     switch (stepStatus) {
       case "completed":
-        return (
-          <CheckCircle className="size-4 text-green-600 animate-in fade-in duration-300" />
-        );
+        return <CheckCircle className="size-4 !text-green-600" />;
       case "current":
-        return (
-          <div className="relative">
-            <Loader2 className="size-4 text-blue-600 animate-spin" />
-            <div className="absolute inset-0 size-4 bg-blue-100 rounded-full animate-ping opacity-75" />
-          </div>
-        );
+        return <Loader2 className="size-4 !text-blue-600 animate-spin" />;
       default:
-        return <Clock className="size-4 text-gray-400" />;
+        return <Clock className="size-4 !text-muted-foreground" />;
     }
   };
 
-  const getStepClassName = (stepIndex: number) => {
+  const getStepAlertClassName = (stepIndex: number) => {
     const stepStatus = getStepStatus(stepIndex);
-    const baseClasses =
-      "flex items-start gap-3 p-3 rounded-lg text-sm transition-all duration-500 ease-in-out";
 
     switch (stepStatus) {
       case "completed":
-        return cn(
-          baseClasses,
-          "text-green-800 bg-green-50 border border-green-200 shadow-sm animate-in slide-in-from-left-1 duration-300"
-        );
+        return "border-green-200 bg-green-50/60 animate-in slide-in-from-left-1 duration-500";
       case "current":
-        return cn(
-          baseClasses,
-          "text-blue-800 bg-blue-50 border border-blue-200 shadow-md font-medium animate-pulse ring-2 ring-blue-200 ring-opacity-50"
-        );
+        return "border-blue-200 bg-blue-50/60 ring-2 ring-blue-200/50 animate-pulse";
       default:
-        return cn(
-          baseClasses,
-          "text-gray-600 bg-gray-50/50 border border-transparent hover:bg-gray-50 hover:border-gray-200"
-        );
+        return "border-gray-200 bg-gray-50/30";
+    }
+  };
+
+  const getStepDescriptionClassName = (stepIndex: number) => {
+    const stepStatus = getStepStatus(stepIndex);
+
+    switch (stepStatus) {
+      case "completed":
+        return "text-green-800 font-medium";
+      case "current":
+        return "text-blue-800 font-semibold";
+      default:
+        return "text-muted-foreground";
     }
   };
 
@@ -67,19 +72,56 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
     return Math.round((completedSteps.length / steps.length) * 100);
   };
 
+  const getProgressColor = () => {
+    switch (status) {
+      case "running":
+        return "[&>div]:bg-gradient-to-r [&>div]:from-blue-500 [&>div]:to-blue-600";
+      case "finished":
+        return "[&>div]:bg-gradient-to-r [&>div]:from-green-500 [&>div]:to-green-600";
+      default:
+        return "[&>div]:bg-gray-400";
+    }
+  };
+
+  const getStatusBadge = () => {
+    switch (status) {
+      case "init":
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <AlertCircle className="size-3" />
+            Planning
+          </Badge>
+        );
+      case "running":
+        return (
+          <Badge variant="default" className="gap-1 bg-blue-600">
+            <Loader2 className="size-3 animate-spin" />
+            Running
+          </Badge>
+        );
+      case "finished":
+        return (
+          <Badge variant="default" className="gap-1 bg-green-600">
+            <CheckCircle className="size-3" />
+            Completed
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   if (status === "init") {
     return (
-      <Card className="border-blue-200 bg-blue-50/60 animate-in fade-in duration-500">
-        <CardHeader className="flex flex-row justify-start items-center gap-2 py-3 px-4">
-          <ListOrdered className="text-blue-600 size-4 mb-0" />
-          <span className="font-semibold text-blue-700 text-sm">
-            Planning Steps
-          </span>
-          <div className="ml-auto">
+      <Alert className="border-blue-200 bg-blue-50/60 animate-in fade-in duration-500">
+        <ListOrdered className="size-4 text-blue-600" />
+        <AlertDescription>
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-semibold text-blue-700">
+              Planning execution steps...
+            </span>
             <Loader2 className="size-4 text-blue-600 animate-spin" />
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 pt-1">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div
@@ -87,106 +129,101 @@ export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
                 className="flex items-center gap-3 animate-pulse"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
-                <div className="h-4 w-4 bg-gray-200 rounded-full animate-pulse" />
-                <div className="h-4 bg-gray-200 rounded-lg animate-pulse flex-1" />
+                <div className="h-3 w-3 bg-muted rounded-full" />
+                <div className="h-3 bg-muted rounded flex-1" />
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <Card className="border-blue-200 bg-blue-50/60 animate-in fade-in duration-500">
-      <CardHeader className="flex flex-row justify-start items-center gap-2 py-3 px-4">
-        <ListOrdered className="text-blue-600 size-4 mb-0" />
-        <div className="flex flex-col flex-1">
+    <Card className="border-blue-200 bg-blue-50/30 animate-in fade-in duration-500">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-blue-700 text-sm">
-              Execution Steps
-            </span>
-            {currentStep !== undefined && (
-              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full font-medium animate-in slide-in-from-right-1 duration-300">
-                {Math.min(currentStep + 1, steps.length)}/{steps.length}
-              </span>
-            )}
-            {status === "running" && (
-              <Loader2 className="size-3 text-blue-600 animate-spin ml-auto" />
-            )}
-            {status === "finished" && (
-              <CheckCircle className="size-3 text-green-600 ml-auto animate-in zoom-in duration-300" />
-            )}
+            <ListOrdered className="size-4 text-blue-600" />
+            <span className="font-semibold text-blue-700">Execution Steps</span>
+            <Badge variant="outline" className="text-xs">
+              {Math.min((currentStep ?? 0) + 1, steps.length)}/{steps.length}
+            </Badge>
           </div>
+          {getStatusBadge()}
+        </div>
 
-          {/* Progress Bar */}
-          <div className="mt-2 w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 rounded-full transition-all duration-700 ease-out"
-              style={{
-                width: `${getProgressPercentage()}%`,
-                boxShadow:
-                  status === "running"
-                    ? "0 0 8px rgba(59, 130, 246, 0.5)"
-                    : "none",
-              }}
-            />
+        {/* Progress Bar */}
+        <div className="space-y-2">
+          <Progress
+            value={getProgressPercentage()}
+            className={cn("h-2", getProgressColor())}
+            style={{
+              backgroundColor: status === "finished" ? "#dcfce7" : "#dbeafe",
+              filter:
+                status === "running"
+                  ? "drop-shadow(0 0 4px rgba(59, 130, 246, 0.4))"
+                  : "none",
+            }}
+          />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>
+              {status === "running" && "Executing..."}
+              {status === "finished" && "All steps completed"}
+            </span>
+            <span className="font-mono">{getProgressPercentage()}%</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 pt-1">
-        <ol className="space-y-2">
+      <CardContent className="pt-0">
+        <div className="space-y-3">
           {steps.map((step, idx) => (
-            <li
+            <Alert
               key={idx}
-              className={getStepClassName(idx)}
+              className={cn(
+                "transition-all duration-500 ease-in-out",
+                getStepAlertClassName(idx)
+              )}
               style={{
                 animationDelay: `${idx * 150}ms`,
                 transform:
-                  getStepStatus(idx) === "current" ? "scale(1.02)" : "scale(1)",
+                  getStepStatus(idx) === "current"
+                    ? "scale(1.005)"
+                    : "scale(1)",
               }}
             >
               {getStepIcon(idx)}
-              <span className="flex-1 leading-relaxed">{step}</span>
-              {getStepStatus(idx) === "completed" && (
-                <div className="ml-auto">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-in zoom-in duration-300" />
-                </div>
-              )}
-              {getStepStatus(idx) === "current" && (
-                <div className="ml-auto">
-                  <div className="flex space-x-1">
-                    <div
-                      className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
-                    />
-                    <div
-                      className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <div
-                      className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
+              <AlertTitle className={getStepDescriptionClassName(idx)}>
+                <div className="flex items-center justify-between">
+                  <span className="leading-relaxed">{step}</span>
+
+                  {/* Step indicators */}
+                  <div className="flex-shrink-0 ml-3">
+                    {getStepStatus(idx) === "completed" && (
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-in zoom-in duration-300" />
+                    )}
+                    {getStepStatus(idx) === "current" && (
+                      <div className="flex space-x-1">
+                        <div
+                          className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <div
+                          className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <div
+                          className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </li>
+              </AlertTitle>
+            </Alert>
           ))}
-        </ol>
-
-        {/* Status Footer */}
-        <div className="mt-4 pt-3 border-t border-blue-200">
-          <div className="flex items-center justify-between text-xs text-blue-600">
-            <span>
-              {status === "running" && "Executing..."}
-              {status === "finished" && "All steps completed"}
-              {/* Why init is not matched with status? */}
-              {/* {status === "init" && "Preparing execution plan"} */}
-            </span>
-            <span className="font-mono">{getProgressPercentage()}%</span>
-          </div>
         </div>
       </CardContent>
     </Card>
