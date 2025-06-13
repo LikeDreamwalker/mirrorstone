@@ -18,6 +18,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { SubstepsCard } from "./substeps-card";
+import { BlockRenderer } from "../block-renderer";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -212,9 +213,13 @@ export function ChatInterface({
                           {message.parts?.map((part, idx) => {
                             if (part.type === "text") {
                               return (
-                                <MarkdownRenderer
+                                // <MarkdownRenderer
+                                //   key={idx}
+                                //   content={part.text}
+                                // />
+                                <BlockRenderer
                                   key={idx}
-                                  content={part.text}
+                                  streamContent={part.text}
                                 />
                               );
                             }
