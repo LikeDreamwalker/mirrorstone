@@ -20,7 +20,18 @@ interface SubstepsBlockProps {
 }
 
 export function SubstepsBlockComponent({ block }: SubstepsBlockProps) {
-  const { steps, status, currentStep, completedSteps = [] } = block;
+  // UPDATED: Extract from content field and fallback to steps array
+  const steps = block.steps || [];
+  const { status, currentStep, completedSteps = [] } = block;
+
+  console.log("🔍 SubstepsBlock debug:", {
+    id: block.id,
+    hasContent: !!block.content,
+    stepsCount: steps.length,
+    currentStep,
+    completedSteps,
+    status,
+  });
 
   const getStepStatus = (stepIndex: number) => {
     if (completedSteps.includes(stepIndex)) return "completed";

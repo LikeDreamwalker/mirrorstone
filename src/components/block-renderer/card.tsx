@@ -14,7 +14,17 @@ interface CardBlockProps {
 }
 
 export function CardBlockComponent({ block }: CardBlockProps) {
+  // UPDATED: All use content field now
   const { title, description, content, status, componentType, data } = block;
+
+  console.log("🔍 CardBlock debug:", {
+    id: block.id,
+    hasContent: !!content,
+    hasTitle: !!title,
+    hasDescription: !!description,
+    componentType,
+    status,
+  });
 
   // Render different skeletons based on component type
   if (status === "init") {
