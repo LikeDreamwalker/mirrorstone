@@ -6,6 +6,13 @@ import { TextBlockComponent } from "./text";
 import { CardBlockComponent } from "./card";
 import { CodeBlockComponent } from "./code";
 import { SubstepsBlockComponent } from "./substeps";
+import { AlertBlockComponent } from "./alert";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { AccordionBlockComponent } from "./accordion";
+import { ProgressBlockComponent } from "./progress";
+import { QuoteBlockComponent } from "./quote";
+import { TableBlockComponent } from "./table";
 
 interface BlockRendererProps {
   streamContent: string;
@@ -129,6 +136,36 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
         return <CodeBlockComponent key={block.id} block={block} />;
       case "substeps":
         return <SubstepsBlockComponent key={block.id} block={block} />;
+      case "alert":
+        return <AlertBlockComponent key={block.id} block={block} />;
+      case "table":
+        return <TableBlockComponent key={block.id} block={block} />;
+      case "quote":
+        return <QuoteBlockComponent key={block.id} block={block} />;
+      case "progress":
+        return <ProgressBlockComponent key={block.id} block={block} />;
+      case "accordion":
+        return <AccordionBlockComponent key={block.id} block={block} />;
+      case "badge":
+        const badgeBlock = block as any;
+        return (
+          <div key={block.id} className="my-2">
+            <Badge variant={badgeBlock.variant || "default"}>
+              {badgeBlock.content}
+            </Badge>
+          </div>
+        );
+      case "separator":
+        return (
+          <div key={block.id} className="my-4">
+            <Separator />
+            {block.content && (
+              <div className="text-center text-sm text-muted-foreground mt-2">
+                {block.content}
+              </div>
+            )}
+          </div>
+        );
       default:
         return (
           <div key={(block as any).id} className="text-red-500">
