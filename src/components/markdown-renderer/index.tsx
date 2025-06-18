@@ -22,21 +22,31 @@ import {
 } from "@/components/ui/tooltip";
 import { ExternalLink, ImageOff } from "lucide-react";
 import Image from "next/image";
-import { SubstepsCard } from "@/components/chat-interface/substeps-card";
 
-// Base component implementation
+// Helper function to extract pure text from React children
+const extractTextContent = (children: React.ReactNode): string => {
+  if (typeof children === "string") {
+    return children;
+  }
+  if (Array.isArray(children)) {
+    return children.map(extractTextContent).join("");
+  }
+  if (children && typeof children === "object" && "props" in children) {
+    return extractTextContent((children as any).props.children);
+  }
+  return String(children || "");
+};
+
+// Base component implementation - CLEAN, NO ANIMATION LOGIC
 function MarkdownBase({
   content,
-  reasoning,
 }: {
   content: string;
-  reasoning?: string;
   reverseTheme?: boolean;
 }) {
-  // Use useMemo to create components only when needed
   const components = useMemo<Components>(
     () => ({
-      // Headings
+      // Clean heading components
       h1: ({ children, ...props }) => (
         <h1
           className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-6"
@@ -86,11 +96,11 @@ function MarkdownBase({
         </h6>
       ),
 
-      // Paragraphs and text
+      // Clean paragraph and text elements
       p: ({ children, ...props }) => (
-        <span className="leading-7 not-first:mt-6" {...props}>
+        <p className="leading-7 [&:not(:first-child)]:mt-6" {...props}>
           {children}
-        </span>
+        </p>
       ),
       strong: ({ children, ...props }) => (
         <strong className="font-semibold" {...props}>
@@ -120,7 +130,7 @@ function MarkdownBase({
         </li>
       ),
 
-      // Blockquotes - using Card component
+      // Blockquotes
       blockquote: ({ children }) => (
         <Card className="my-6 border-l-4 border-l-primary bg-background">
           <CardContent className="pt-6">
@@ -129,8 +139,9 @@ function MarkdownBase({
         </Card>
       ),
 
-      // Links - using Next.js Link for internal links
+      // Links - preserve functionality
       a: ({ href, children, ...props }) => {
+        const textContent = extractTextContent(children);
         const isInternalLink = href?.startsWith("/") || href?.startsWith("#");
 
         if (isInternalLink && href) {
@@ -140,7 +151,7 @@ function MarkdownBase({
               className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
               {...props}
             >
-              {children}
+              {textContent}
             </Link>
           );
         }
@@ -156,7 +167,7 @@ function MarkdownBase({
                   rel="noopener noreferrer"
                   {...props}
                 >
-                  {children}
+                  {textContent}
                   <ExternalLink className="ml-1 h-3 w-3" />
                 </a>
               </TooltipTrigger>
@@ -166,7 +177,7 @@ function MarkdownBase({
         );
       },
 
-      // Tables - using shadcn/ui Table components
+      // Tables
       table: ({ children, ...props }) => (
         <Card className="my-6 w-full overflow-y-auto bg-background">
           <Table {...props}>{children}</Table>
@@ -188,26 +199,22 @@ function MarkdownBase({
         <TableCell {...props}>{children}</TableCell>
       ),
 
-      // Horizontal rule - using Separator
+      // Other elements
       hr: ({ ...props }) => <Separator className="my-6" {...props} />,
 
-      // Images - using Next.js Image component
+      // Images
       img: ({ src, alt }) => {
-        // For external images or if src is undefined
-        if (!src || (typeof src === "string" && src.startsWith("http"))) {
+        if (!src) {
           return (
             <Card className="flex flex-col items-center justify-center rounded-md border border-dashed border-muted-foreground/50 bg-background p-8 text-muted-foreground">
               <ImageOff className="h-10 w-10 mb-2 opacity-50" />
               <span className="text-sm font-medium">{alt || "Image"}</span>
               <span className="text-xs mt-1 max-w-xs text-center">
-                This image is not available or is an external link. Click to
-                view it.
+                This image is not available or is an external link.
               </span>
             </Card>
           );
         }
-
-        // For local images
         return (
           <div className="my-6 relative">
             <div
@@ -215,13 +222,7 @@ function MarkdownBase({
               style={{ maxHeight: "30rem" }}
             >
               <Image
-                src={
-                  typeof src === "string"
-                    ? src
-                    : src
-                    ? URL.createObjectURL(src)
-                    : "/placeholder.svg"
-                }
+                src={typeof src === "string" ? src : "/placeholder.svg"}
                 alt={alt || ""}
                 width={800}
                 height={600}
@@ -230,7 +231,7 @@ function MarkdownBase({
               />
             </div>
             {alt && (
-              <span className="mt-2 text-center text-sm text-muted-foreground">
+              <span className="mt-2 text-center text-sm text-muted-foreground block">
                 {alt}
               </span>
             )}
@@ -238,47 +239,28 @@ function MarkdownBase({
         );
       },
 
-      // Override the code renderer to check for ColorPreview tags
+      // Code blocks
       code: ({ className, children, ...props }) => {
-        // Check if this is a code block with a language specified
         const match = /language-(\w+)/.exec(className || "");
+        const textContent = extractTextContent(children);
 
-        // Detect ```substeps code blocks
-        if (className === "language-substeps") {
-          // Parse substeps from children (string)
-          const substepsText = (children ?? "").toString();
-          const substeps = substepsText
-            .split(/\r?\n/)
-            .map((line) => line.trim())
-            .filter((line) => /^\d+\./.test(line))
-            .map((line) => {
-              // Split "1. Action: params"
-              const match = line.match(/^\d+\.\s*(.*?)(?::\s*(.*))?$/);
-              return match
-                ? { action: match[1] || "", params: match[2] || "" }
-                : { action: line, params: "" };
-            });
-
-          return <SubstepsCard substeps={substeps} className="my-2" />;
-        }
-
-        // If no language match is found, it's an inline code block
+        // Inline code
         if (!match && children) {
           return (
             <code
               className="px-1 py-0.5 bg-muted rounded text-sm font-mono"
               {...props}
             >
-              {children}
+              {textContent}
             </code>
           );
         }
 
-        // If it's not inline code, render as a code block
+        // Code block
         return (
           <pre className="my-4 p-4 bg-muted rounded-md overflow-x-auto">
             <code className="text-sm font-mono" {...props}>
-              {children}
+              {textContent}
             </code>
           </pre>
         );
@@ -288,25 +270,13 @@ function MarkdownBase({
   );
 
   return (
-    <>
-      {reasoning && (
-        <div className="mb-2 p-2 bg-gray-100 rounded text-sm">
-          <details>
-            <summary className="cursor-pointer font-medium">Reasoning</summary>
-            <pre className="mt-2 whitespace-pre-wrap text-xs">{reasoning}</pre>
-          </details>
-        </div>
-      )}
-      <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
-        {content}
-      </ReactMarkdown>
-    </>
+    <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
+      {content}
+    </ReactMarkdown>
   );
 }
 
-// Export memoized version
 export const MarkdownRenderer = memo(
   MarkdownBase,
-  // Simple equality check for the content prop
   (prevProps, nextProps) => prevProps.content === nextProps.content
 );

@@ -73,7 +73,7 @@
 
 @layer utilities {
   body {
-    @apply font-serif;
+    /* @apply font-serif; */
   }
 }
 
