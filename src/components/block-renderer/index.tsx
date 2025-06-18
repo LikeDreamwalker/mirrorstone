@@ -13,10 +13,90 @@ import { AccordionBlockComponent } from "./accordion";
 import { ProgressBlockComponent } from "./progress";
 import { QuoteBlockComponent } from "./quote";
 import { TableBlockComponent } from "./table";
+import { BlurFade } from "@/components/magicui/blur-fade";
 
 interface BlockRendererProps {
   streamContent: string;
 }
+
+// Animation configurations for different block types
+const getAnimationConfig = (blockType: string, index: number) => {
+  const baseDelay = index * 0.05; // Stagger blocks
+  const baseDuration = 0.25; // Base duration for faster animations
+
+  switch (blockType) {
+    case "text":
+      return {
+        delay: baseDelay,
+        duration: baseDuration,
+        direction: "up" as const,
+        blur: "4px",
+      };
+    case "component":
+      return {
+        delay: baseDelay + 0.1,
+        duration: baseDuration + 0.15,
+        direction: "up" as const,
+        blur: "6px",
+      };
+    case "table":
+      return {
+        delay: baseDelay + 0.15,
+        duration: baseDuration + 0.2,
+        direction: "up" as const,
+        blur: "8px",
+      };
+    case "code":
+      return {
+        delay: baseDelay + 0.05,
+        duration: baseDuration + 0.1,
+        direction: "left" as const,
+        blur: "5px",
+      };
+    case "alert":
+      return {
+        delay: baseDelay + 0.1,
+        duration: baseDuration + 0.1,
+        direction: "down" as const,
+        blur: "6px",
+      };
+    case "quote":
+      return {
+        delay: baseDelay + 0.2,
+        duration: baseDuration + 0.15,
+        direction: "right" as const,
+        blur: "7px",
+      };
+    case "accordion":
+      return {
+        delay: baseDelay + 0.15,
+        duration: baseDuration + 0.15,
+        direction: "up" as const,
+        blur: "6px",
+      };
+    case "progress":
+      return {
+        delay: baseDelay + 0.1,
+        duration: baseDuration + 0.1,
+        direction: "up" as const,
+        blur: "5px",
+      };
+    case "substeps":
+      return {
+        delay: baseDelay + 0.2,
+        duration: baseDuration + 0.2,
+        direction: "up" as const,
+        blur: "7px",
+      };
+    default:
+      return {
+        delay: baseDelay,
+        duration: baseDuration + 0.1,
+        direction: "up" as const,
+        blur: "4px",
+      };
+  }
+};
 
 export function BlockRenderer({ streamContent }: BlockRendererProps) {
   const extractedBlocks = useMemo(() => {
@@ -91,8 +171,6 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
           });
 
           if (block?.id && block?.type && block?.status) {
-            // KEY FIX: Always use the latest version of the block
-            // This ensures updates overwrite previous versions
             console.log(
               blocks[block.id]
                 ? "🔄 Updating existing block:"
@@ -117,7 +195,7 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
     return blocks;
   }, [streamContent]);
 
-  const renderBlock = (block: Block) => {
+  const renderBlock = (block: Block, index: number) => {
     console.log(
       "🎨 Rendering block:",
       block.id,
@@ -127,37 +205,52 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
       block.status
     );
 
+    const animationConfig = getAnimationConfig(block.type, index);
+
+    // Get the base component without BlurFade wrapper
+    let baseComponent;
+
     switch (block.type) {
       case "text":
-        return <TextBlockComponent key={block.id} block={block} />;
+        baseComponent = <TextBlockComponent block={block} />;
+        break;
       case "component":
-        return <CardBlockComponent key={block.id} block={block} />;
+        baseComponent = <CardBlockComponent block={block} />;
+        break;
       case "code":
-        return <CodeBlockComponent key={block.id} block={block} />;
+        baseComponent = <CodeBlockComponent block={block} />;
+        break;
       case "substeps":
-        return <SubstepsBlockComponent key={block.id} block={block} />;
+        baseComponent = <SubstepsBlockComponent block={block} />;
+        break;
       case "alert":
-        return <AlertBlockComponent key={block.id} block={block} />;
+        baseComponent = <AlertBlockComponent block={block} />;
+        break;
       case "table":
-        return <TableBlockComponent key={block.id} block={block} />;
+        baseComponent = <TableBlockComponent block={block} />;
+        break;
       case "quote":
-        return <QuoteBlockComponent key={block.id} block={block} />;
+        baseComponent = <QuoteBlockComponent block={block} />;
+        break;
       case "progress":
-        return <ProgressBlockComponent key={block.id} block={block} />;
+        baseComponent = <ProgressBlockComponent block={block} />;
+        break;
       case "accordion":
-        return <AccordionBlockComponent key={block.id} block={block} />;
+        baseComponent = <AccordionBlockComponent block={block} />;
+        break;
       case "badge":
         const badgeBlock = block as any;
-        return (
-          <div key={block.id} className="my-2">
+        baseComponent = (
+          <div className="my-2">
             <Badge variant={badgeBlock.variant || "default"}>
               {badgeBlock.content}
             </Badge>
           </div>
         );
+        break;
       case "separator":
-        return (
-          <div key={block.id} className="my-4">
+        baseComponent = (
+          <div className="my-4">
             <Separator />
             {block.content && (
               <div className="text-center text-sm text-muted-foreground mt-2">
@@ -166,13 +259,29 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
             )}
           </div>
         );
+        break;
       default:
-        return (
-          <div key={(block as any).id} className="text-red-500">
+        baseComponent = (
+          <div className="text-red-500">
             Unknown block type: {(block as any).type}
           </div>
         );
     }
+
+    // Wrap everything in BlurFade for smooth entrance animations
+    return (
+      <BlurFade
+        key={block.id}
+        delay={animationConfig.delay}
+        duration={animationConfig.duration}
+        direction={animationConfig.direction}
+        blur={animationConfig.blur}
+        inView={true}
+        inViewMargin="-20px"
+      >
+        {baseComponent}
+      </BlurFade>
+    );
   };
 
   const blockArray = useMemo(
@@ -182,11 +291,18 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
 
   return (
     <div className="block-renderer space-y-4">
-      {blockArray.map(renderBlock)}
+      {blockArray.map((block, index) => renderBlock(block, index))}
 
-      <div className="text-xs text-gray-400 mt-4 font-mono">
-        Blocks: {blockArray.length} | Content: {streamContent.length} chars
-      </div>
+      <BlurFade
+        delay={blockArray.length * 0.1 + 0.5}
+        duration={0.4}
+        direction="up"
+        blur="3px"
+      >
+        <div className="text-xs text-gray-400 mt-4 font-mono">
+          Blocks: {blockArray.length} | Content: {streamContent.length} chars
+        </div>
+      </BlurFade>
     </div>
   );
 }

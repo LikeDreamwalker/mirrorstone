@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/tooltip";
 import { ExternalLink, ImageOff } from "lucide-react";
 import Image from "next/image";
-import { TextAnimate } from "@/components/magicui/text-animate";
 
 // Helper function to extract pure text from React children
 const extractTextContent = (children: React.ReactNode): string => {
@@ -38,7 +37,7 @@ const extractTextContent = (children: React.ReactNode): string => {
   return String(children || "");
 };
 
-// Base component implementation
+// Base component implementation - CLEAN, NO ANIMATION LOGIC
 function MarkdownBase({
   content,
 }: {
@@ -47,15 +46,13 @@ function MarkdownBase({
 }) {
   const components = useMemo<Components>(
     () => ({
-      // Headings - use span inside headings
+      // Clean heading components
       h1: ({ children, ...props }) => (
         <h1
           className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-6"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h1>
       ),
       h2: ({ children, ...props }) => (
@@ -63,9 +60,7 @@ function MarkdownBase({
           className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 mt-10 mb-4"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h2>
       ),
       h3: ({ children, ...props }) => (
@@ -73,9 +68,7 @@ function MarkdownBase({
           className="scroll-m-20 text-2xl font-semibold tracking-tight mt-8 mb-4"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h3>
       ),
       h4: ({ children, ...props }) => (
@@ -83,9 +76,7 @@ function MarkdownBase({
           className="scroll-m-20 text-xl font-semibold tracking-tight mt-6 mb-3"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h4>
       ),
       h5: ({ children, ...props }) => (
@@ -93,9 +84,7 @@ function MarkdownBase({
           className="scroll-m-20 text-lg font-semibold tracking-tight mt-6 mb-2"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h5>
       ),
       h6: ({ children, ...props }) => (
@@ -103,34 +92,24 @@ function MarkdownBase({
           className="scroll-m-20 text-base font-semibold tracking-tight mt-6 mb-2"
           {...props}
         >
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </h6>
       ),
 
-      // FIXED: Paragraphs - use span to avoid nested p tags
+      // Clean paragraph and text elements
       p: ({ children, ...props }) => (
         <p className="leading-7 [&:not(:first-child)]:mt-6" {...props}>
-          <TextAnimate animation="fadeIn" by="word" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </p>
       ),
-
-      // FIXED: Inline elements - use span
       strong: ({ children, ...props }) => (
         <strong className="font-semibold" {...props}>
-          <TextAnimate animation="blurInUp" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </strong>
       ),
       em: ({ children, ...props }) => (
         <em className="italic" {...props}>
-          <TextAnimate animation="fadeIn" by="character" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </em>
       ),
 
@@ -147,9 +126,7 @@ function MarkdownBase({
       ),
       li: ({ children, ...props }) => (
         <li className="mt-2" {...props}>
-          <TextAnimate animation="slideLeft" by="word" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
+          {children}
         </li>
       ),
 
@@ -157,16 +134,12 @@ function MarkdownBase({
       blockquote: ({ children }) => (
         <Card className="my-6 border-l-4 border-l-primary bg-background">
           <CardContent className="pt-6">
-            <div className="italic text-muted-foreground">
-              <TextAnimate animation="slideRight" by="word" once as="span">
-                {extractTextContent(children)}
-              </TextAnimate>
-            </div>
+            <div className="italic text-muted-foreground">{children}</div>
           </CardContent>
         </Card>
       ),
 
-      // FIXED: Links - use span
+      // Links - preserve functionality
       a: ({ href, children, ...props }) => {
         const textContent = extractTextContent(children);
         const isInternalLink = href?.startsWith("/") || href?.startsWith("#");
@@ -178,9 +151,7 @@ function MarkdownBase({
               className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
               {...props}
             >
-              <TextAnimate animation="blurInUp" by="character" once as="span">
-                {textContent}
-              </TextAnimate>
+              {textContent}
             </Link>
           );
         }
@@ -196,14 +167,7 @@ function MarkdownBase({
                   rel="noopener noreferrer"
                   {...props}
                 >
-                  <TextAnimate
-                    animation="blurInUp"
-                    by="character"
-                    once
-                    as="span"
-                  >
-                    {textContent}
-                  </TextAnimate>
+                  {textContent}
                   <ExternalLink className="ml-1 h-3 w-3" />
                 </a>
               </TooltipTrigger>
@@ -213,7 +177,7 @@ function MarkdownBase({
         );
       },
 
-      // Tables - use span for cells
+      // Tables
       table: ({ children, ...props }) => (
         <Card className="my-6 w-full overflow-y-auto bg-background">
           <Table {...props}>{children}</Table>
@@ -229,21 +193,13 @@ function MarkdownBase({
         <TableRow {...props}>{children}</TableRow>
       ),
       th: ({ children, ...props }) => (
-        <TableHead {...props}>
-          <TextAnimate animation="fadeIn" by="word" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
-        </TableHead>
+        <TableHead {...props}>{children}</TableHead>
       ),
       td: ({ children, ...props }) => (
-        <TableCell {...props}>
-          <TextAnimate animation="fadeIn" by="word" once as="span">
-            {extractTextContent(children)}
-          </TextAnimate>
-        </TableCell>
+        <TableCell {...props}>{children}</TableCell>
       ),
 
-      // Horizontal rule
+      // Other elements
       hr: ({ ...props }) => <Separator className="my-6" {...props} />,
 
       // Images
@@ -276,9 +232,7 @@ function MarkdownBase({
             </div>
             {alt && (
               <span className="mt-2 text-center text-sm text-muted-foreground block">
-                <TextAnimate animation="fadeIn" by="word" once as="span">
-                  {alt}
-                </TextAnimate>
+                {alt}
               </span>
             )}
           </div>
@@ -290,7 +244,7 @@ function MarkdownBase({
         const match = /language-(\w+)/.exec(className || "");
         const textContent = extractTextContent(children);
 
-        // Inline code - no animation to avoid complications
+        // Inline code
         if (!match && children) {
           return (
             <code
@@ -302,7 +256,7 @@ function MarkdownBase({
           );
         }
 
-        // Code block - no animation for code blocks
+        // Code block
         return (
           <pre className="my-4 p-4 bg-muted rounded-md overflow-x-auto">
             <code className="text-sm font-mono" {...props}>
