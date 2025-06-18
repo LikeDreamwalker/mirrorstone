@@ -34,7 +34,7 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
           <TextBlockComponent content={content} status="finished" />
         </div>
       )}
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion type="multiple" className="w-full">
         {items.map((item, index) => (
           <AccordionItem key={index} value={`item-${index}`}>
             <AccordionTrigger>
