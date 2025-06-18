@@ -1,10 +1,8 @@
-export const runtime = "nodejs";
-
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { deepseek } from "@ai-sdk/deepseek";
 import type { UIMessage } from "ai";
-import { tools } from "@/ai/tools";
-import { R1_SYSTEM_PROMPT, V3_SYSTEM_PROMPT } from "@/ai/prompts";
+import { createStreamAwareTools } from "@/ai/tools";
+import { V3_DISPATCHER_PROMPT } from "@/ai/prompts";
 
 // Helper: Remove reasoning parts from assistant messages
 function filterReasoningParts(messages: UIMessage[]): UIMessage[] {
@@ -19,27 +17,11 @@ function filterReasoningParts(messages: UIMessage[]): UIMessage[] {
   });
 }
 
-function toDeepSeekMessages(
-  messages: UIMessage[]
-): { role: string; content: string }[] {
-  return messages.map((msg) => ({
-    role: msg.role,
-    content:
-      msg.parts
-        ?.map((p) =>
-          (p.type === "text" || p.type === "reasoning") && "text" in p
-            ? p.text
-            : ""
-        )
-        .join("") ?? "",
-  }));
-}
-
-class AI5MultiModelStreamComposer {
+class MultiAgentStreamComposer {
   private encoder = new TextEncoder();
   private controller: ReadableStreamDefaultController<Uint8Array> | null = null;
 
-  // Public properties for substeps tracking
+  // Substeps tracking
   public substepsBlockId: string | null = null;
   public substepsData: any = null;
   public currentStepIndex = 0;
@@ -62,114 +44,43 @@ class AI5MultiModelStreamComposer {
     );
   }
 
-  // Stream R1's analysis using direct API
-  async streamR1Analysis(messages: UIMessage[], apiKey: string) {
-    try {
-      let r1Messages: UIMessage[];
-      if (
-        messages.length === 0 ||
-        messages[0].role !== "system" ||
-        (messages[0].parts?.[0]?.type === "text" &&
-          messages[0].parts?.[0]?.text !== R1_SYSTEM_PROMPT)
-      ) {
-        r1Messages = [
-          {
-            id: crypto.randomUUID(),
-            role: "system",
-            parts: [{ type: "text", text: R1_SYSTEM_PROMPT }],
-          },
-          ...filterReasoningParts(messages),
-        ];
-      } else {
-        r1Messages = filterReasoningParts(messages);
-      }
+  // Create stream context for tools
+  private getStreamContext() {
+    return {
+      sendUIMessage: this.sendUIMessage.bind(this),
+      apiKey: process.env.DEEPSEEK_API_KEY!,
+      convertToModelMessages,
+      streamText,
+      stepCountIs,
+    };
+  }
 
-      const response = await fetch(
-        "https://api.deepseek.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "deepseek-reasoner",
-            messages: toDeepSeekMessages(r1Messages),
-            stream: true,
-          }),
-        }
-      );
+  // Extract and setup substeps from R1 result
+  private setupSubstepsFromR1Result(r1Result: any) {
+    if (
+      r1Result.structured_data &&
+      r1Result.structured_data.type === "substeps"
+    ) {
+      this.substepsBlockId = r1Result.structured_data.id;
+      this.substepsData = r1Result.structured_data;
+      this.currentStepIndex = 0;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("R1 Error body:", errorText);
-        throw new Error(`DeepSeek R1 API error: ${response.status}`);
-      }
+      console.log("🔍 Setting up substeps from R1:", this.substepsData);
 
-      if (!response.body) throw new Error("No response body from DeepSeek R1");
-
-      const reader = response.body.getReader();
-      let buffer = "";
-      let fullAnalysis = "";
-      let fullReasoning = "";
-      let r1Raw = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += new TextDecoder().decode(value);
-
-        const lines = buffer.split("\n");
-        buffer = lines.pop()!;
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            const reasoning = parsed.choices?.[0]?.delta?.reasoning_content;
-
-            if (reasoning) {
-              fullReasoning += reasoning;
-              this.sendUIMessage({
-                type: "reasoning",
-                text: reasoning,
-              });
-            }
-
-            if (content) {
-              fullAnalysis += content;
-              r1Raw += content;
-              // Only send to client if not inside actions block
-              if (
-                !/Render the Substeps Card|Answer the question/i.test(content)
-              ) {
-                this.sendUIMessage({
-                  type: "text",
-                  text: content,
-                });
-              }
-            }
-          } catch (e) {
-            // Ignore parsing errors
-          }
-        }
-      }
-
-      return { analysis: fullAnalysis, reasoning: fullReasoning, r1Raw };
-    } catch (error) {
+      // Update substeps to running status
       this.sendUIMessage({
-        type: "error",
-        error: error instanceof Error ? error.message : String(error),
+        type: "text",
+        text: JSON.stringify({
+          ...r1Result.structured_data,
+          status: "running",
+          currentStep: 0,
+          completedSteps: [],
+        }),
       });
-      throw error;
     }
   }
 
-  // Update substeps progress when tools complete
+  // Update substeps progress
   private updateSubstepsProgress(stepResult: any) {
     if (!this.substepsBlockId || !this.substepsData) return;
 
@@ -179,7 +90,6 @@ class AI5MultiModelStreamComposer {
       contentTypes: stepResult.content?.map((c: any) => c.type) || [],
     });
 
-    // Check if this step contains tool results
     const toolResults =
       stepResult.content?.filter((item: any) => item.type === "tool-result") ||
       [];
@@ -195,42 +105,46 @@ class AI5MultiModelStreamComposer {
 
     // Increment step when tools complete successfully
     if (stepResult.finishReason === "tool-calls" && toolResults.length > 0) {
-      // Increment by number of completed tools (each tool execution = 1 step progress)
-      const stepIncrement = toolResults.length;
-      this.currentStepIndex = Math.min(
-        this.currentStepIndex + stepIncrement,
-        this.substepsData.steps.length
+      // Don't increment for agent tools (r1Analysis, expertV3) as they handle their own progress
+      const nonAgentTools = toolResults.filter(
+        (tr: any) => !["r1Analysis", "expertV3"].includes(tr.toolName)
       );
 
-      console.log(
-        `📈 Updating substeps progress: step ${this.currentStepIndex}/${
+      if (nonAgentTools.length > 0) {
+        this.currentStepIndex = Math.min(
+          this.currentStepIndex + nonAgentTools.length,
           this.substepsData.steps.length
-        } (+${stepIncrement} from tools: ${toolResults
-          .map((tr: any) => tr.toolName)
-          .join(", ")})`
-      );
+        );
 
-      // Send updated substeps block with same ID
-      this.sendUIMessage({
-        type: "text",
-        text: JSON.stringify({
-          id: this.substepsBlockId,
-          type: "substeps",
-          status:
-            this.currentStepIndex >= this.substepsData.steps.length
-              ? "finished"
-              : "running",
-          steps: this.substepsData.steps,
-          currentStep: Math.min(
-            this.currentStepIndex - 1,
-            this.substepsData.steps.length - 1
-          ), // 0-indexed
-          completedSteps: Array.from(
-            { length: this.currentStepIndex },
-            (_, i) => i
-          ),
-        }),
-      });
+        console.log(
+          `📈 Updating substeps progress: step ${this.currentStepIndex}/${
+            this.substepsData.steps.length
+          } (+${nonAgentTools.length} from tools: ${nonAgentTools
+            .map((tr: any) => tr.toolName)
+            .join(", ")})`
+        );
+
+        this.sendUIMessage({
+          type: "text",
+          text: JSON.stringify({
+            id: this.substepsBlockId,
+            type: "substeps",
+            status:
+              this.currentStepIndex >= this.substepsData.steps.length
+                ? "finished"
+                : "running",
+            steps: this.substepsData.steps,
+            currentStep: Math.min(
+              this.currentStepIndex - 1,
+              this.substepsData.steps.length - 1
+            ),
+            completedSteps: Array.from(
+              { length: this.currentStepIndex },
+              (_, i) => i
+            ),
+          }),
+        });
+      }
     }
 
     // Handle final completion
@@ -255,23 +169,49 @@ class AI5MultiModelStreamComposer {
     }
   }
 
-  // Stream agent execution using AI SDK 5 with step tracking
-  async streamAgentExecutionFromPrompt(promptMessages: UIMessage[]) {
+  // Main V3 Dispatcher with stream-aware tools
+  async runV3Dispatcher(messages: UIMessage[]) {
     try {
+      // Create stream-aware tools
+      const streamAwareTools = createStreamAwareTools(this.getStreamContext());
+
+      // Prepare V3 dispatcher messages
+      const dispatcherMessages = [
+        {
+          role: "system" as const,
+          parts: [{ type: "text" as const, text: V3_DISPATCHER_PROMPT }],
+        },
+        ...filterReasoningParts(messages),
+      ];
+
       const result = streamText({
         model: deepseek("deepseek-chat"),
-        messages: convertToModelMessages(promptMessages),
-        temperature: 0.7,
-        tools,
-        stopWhen: stepCountIs(10),
+        messages: convertToModelMessages(dispatcherMessages),
+        temperature: 0.9, // Conversational dispatcher
+        tools: streamAwareTools,
+        stopWhen: stepCountIs(15),
         onStepFinish: (stepResult) => {
-          // Update substeps when tools are executed
+          // Check if R1 tool was called and set up substeps
+          const toolCalls = stepResult.toolCalls || [];
+          const r1ToolCall = toolCalls.find(
+            (tc) => tc.toolName === "r1Analysis"
+          );
+
+          if (r1ToolCall && stepResult.toolResults) {
+            const r1Result = stepResult.toolResults.find(
+              (tr) => tr.toolCallId === r1ToolCall.toolCallId
+            );
+            if (r1Result && r1Result.result) {
+              this.setupSubstepsFromR1Result(r1Result.result);
+            }
+          }
+
+          // Update substeps progress for other tools
           this.updateSubstepsProgress(stepResult);
         },
       });
 
       for await (const part of result.fullStream) {
-        // Forward directly
         this.sendUIMessage(part);
       }
     } catch (error) {
@@ -302,72 +242,12 @@ class AI5MultiModelStreamComposer {
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
-  const apiKey = process.env.DEEPSEEK_API_KEY!;
-  const composer = new AI5MultiModelStreamComposer();
+  const composer = new MultiAgentStreamComposer();
   const stream = composer.createStream();
 
   (async () => {
     try {
-      // Step 1: Stream R1's analysis
-      const { analysis, reasoning, r1Raw } = await composer.streamR1Analysis(
-        messages,
-        apiKey
-      );
-
-      // Step 2: Extract substeps from R1's block output
-      const substepsBlockMatch = r1Raw.match(
-        /{"id":[^}]*"type":\s*"substeps"[^}]*}/
-      );
-
-      if (substepsBlockMatch) {
-        try {
-          const substepsBlock = JSON.parse(substepsBlockMatch[0]);
-          const steps = substepsBlock.steps || [];
-
-          if (steps.length > 0) {
-            // Store substeps info for progress tracking
-            composer.substepsBlockId = substepsBlock.id;
-            composer.substepsData = substepsBlock;
-            composer.currentStepIndex = 0;
-
-            console.log("🔍 Found substeps block:", substepsBlock);
-
-            // Update substeps block to "running" status
-            composer.sendUIMessage({
-              type: "text",
-              text: JSON.stringify({
-                ...substepsBlock,
-                status: "running",
-                currentStep: 0,
-              }),
-            });
-
-            // Create V3 prompt from extracted steps
-            const v3UserMessage = steps
-              .map((step: string, idx: number) => `${idx + 1}. ${step}`)
-              .join("\n");
-
-            const v3Prompt: UIMessage[] = [
-              {
-                id: crypto.randomUUID(),
-                role: "system",
-                parts: [{ type: "text", text: V3_SYSTEM_PROMPT }],
-              },
-              {
-                id: crypto.randomUUID(),
-                role: "user",
-                parts: [{ type: "text", text: v3UserMessage }],
-              },
-            ];
-
-            // Execute with automatic step tracking via onStepFinish
-            await composer.streamAgentExecutionFromPrompt(v3Prompt);
-          }
-        } catch (e) {
-          console.error("Failed to parse substeps block:", e);
-        }
-      }
-
+      await composer.runV3Dispatcher(messages);
       composer.close();
     } catch (error) {
       composer.error(error as Error);
