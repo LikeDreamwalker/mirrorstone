@@ -190,25 +190,25 @@ class MultiAgentStreamComposer {
         temperature: 0.9, // Conversational dispatcher
         tools: streamAwareTools,
         stopWhen: stepCountIs(15),
-        onStepFinish: (stepResult) => {
-          // Check if R1 tool was called and set up substeps
-          const toolCalls = stepResult.toolCalls || [];
-          const r1ToolCall = toolCalls.find(
-            (tc) => tc.toolName === "r1Analysis"
-          );
+        // onStepFinish: (stepResult) => {
+        //   // Check if R1 tool was called and set up substeps
+        //   const toolCalls = stepResult.toolCalls || [];
+        //   const r1ToolCall = toolCalls.find(
+        //     (tc) => tc.toolName === "helperR1"
+        //   );
 
-          if (r1ToolCall && stepResult.toolResults) {
-            const r1Result = stepResult.toolResults.find(
-              (tr) => tr.toolCallId === r1ToolCall.toolCallId
-            );
-            if (r1Result && r1Result.result) {
-              this.setupSubstepsFromR1Result(r1Result.result);
-            }
-          }
+        //   if (r1ToolCall && stepResult.toolResults) {
+        //     const r1Result = stepResult.toolResults.find(
+        //       (tr) => tr.toolCallId === r1ToolCall.toolCallId
+        //     );
+        //     if (r1Result && r1Result.result) {
+        //       this.setupSubstepsFromR1Result(r1Result.result);
+        //     }
+        //   }
 
-          // Update substeps progress for other tools
-          this.updateSubstepsProgress(stepResult);
-        },
+        //   // Update substeps progress for other tools
+        //   this.updateSubstepsProgress(stepResult);
+        // },
       });
 
       for await (const part of result.fullStream) {

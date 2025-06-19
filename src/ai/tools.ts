@@ -1,7 +1,7 @@
 import { tool as createTool } from "ai";
 import { z } from "zod";
 import { RateLimitTracker } from "../lib/rate-limit-tracker";
-import { R1_SYSTEM_PROMPT, EXPERT_V3_PROMPT } from "./prompts";
+import { HELPER_R1_PROMPT, HELPER_V3_PROMPT } from "./prompts";
 
 type BraveWebResult = {
   title: string;
@@ -155,18 +155,25 @@ function toDeepSeekMessages(
   }));
 }
 
-// Create stream-aware R1 analysis tool
-export const createR1AnalysisTool = (streamContext: StreamContext) => {
+// Updated R1 Analysis Tool (Level 2 Expert)
+export const createHelperR1Tool = (streamContext: StreamContext) => {
   return createTool({
     description:
-      "Use DeepSeek R1 for complex reasoning and analysis. R1 will stream its thinking process while this tool waits for the complete result.",
+      "Engage R1 Level 2 Expert for complex reasoning, system design, architecture decisions, and advanced problem-solving. Use for multi-step analysis requiring deep thinking.",
     parameters: z.object({
-      question: z.string().describe("Question requiring deep R1 analysis"),
+      problem: z
+        .string()
+        .describe("Complex problem requiring deep R1 analysis"),
       context: z.string().optional().describe("Additional context for R1"),
+      focus_areas: z
+        .array(z.string())
+        .optional()
+        .describe("Specific areas to focus analysis on"),
     }),
     execute: async ({
-      question,
+      problem,
       context,
+      focus_areas,
     }): Promise<{
       analysis: string;
       reasoning: string;
@@ -174,17 +181,25 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
       success: boolean;
     }> => {
       try {
-        // Create R1 messages
+        // Create R1 messages with enhanced context
+        const taskDescription = [
+          `Complex Problem: ${problem}`,
+          context ? `Context: ${context}` : "",
+          focus_areas?.length ? `Focus Areas: ${focus_areas.join(", ")}` : "",
+          "",
+          "Please provide systematic analysis with clear reasoning chains and strategic recommendations.",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
         const r1Messages = [
           {
             role: "system",
-            content: R1_SYSTEM_PROMPT,
+            content: HELPER_R1_PROMPT,
           },
           {
             role: "user",
-            content: context
-              ? `Context: ${context}\n\nQuestion: ${question}`
-              : question,
+            content: taskDescription,
           },
         ];
 
@@ -235,7 +250,6 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
 
               if (reasoning) {
                 fullReasoning += reasoning;
-                // Stream reasoning chunks directly to UI
                 streamContext.sendUIMessage({
                   type: "reasoning",
                   text: reasoning,
@@ -244,7 +258,6 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
 
               if (content) {
                 fullAnalysis += content;
-                // Stream analysis chunks directly to UI
                 streamContext.sendUIMessage({
                   type: "text",
                   text: content,
@@ -269,19 +282,6 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
           console.log("No structured data found in R1 response");
         }
 
-        // Notify completion
-        streamContext.sendUIMessage({
-          type: "text",
-          text: JSON.stringify({
-            id: `r1-complete-${Date.now()}`,
-            type: "component",
-            status: "finished",
-            componentType: "success",
-            title: "Analysis Complete",
-            content: "R1 has finished its deep analysis. Processing results...",
-          }),
-        });
-
         return {
           analysis: fullAnalysis,
           reasoning: fullReasoning,
@@ -290,18 +290,6 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-
-        streamContext.sendUIMessage({
-          type: "text",
-          text: JSON.stringify({
-            id: `r1-error-${Date.now()}`,
-            type: "alert",
-            status: "finished",
-            variant: "error",
-            title: "R1 Analysis Failed",
-            content: `Failed to analyze with R1: ${errorMsg}`,
-          }),
-        });
 
         return {
           analysis: `R1 analysis failed: ${errorMsg}`,
@@ -313,58 +301,69 @@ export const createR1AnalysisTool = (streamContext: StreamContext) => {
   });
 };
 
-// Create stream-aware Expert V3 tool
-export const createExpertV3Tool = (streamContext: StreamContext) => {
+// Updated Expert V3 Tool (Level 1 Expert)
+export const createHelperV3Tool = (streamContext: StreamContext) => {
   return createTool({
     description:
-      "Use Expert V3 for precise execution of technical tasks with high accuracy",
+      "Engage Expert V3 Level 1 for precise execution, direct answers, and technical implementations requiring high accuracy.",
     parameters: z.object({
-      task: z.string().describe("Specific task for Expert V3"),
-      requirements: z.string().describe("Detailed requirements"),
+      task: z.string().describe("Specific task requiring precision"),
+      requirements: z
+        .string()
+        .describe("Detailed requirements and constraints"),
+      output_format: z
+        .enum([
+          "code",
+          "specification",
+          "documentation",
+          "analysis",
+          "implementation",
+        ])
+        .optional()
+        .describe("Expected output format"),
       use_tools: z
         .boolean()
-        .default(true)
+        .default(false)
         .describe("Whether to use search/web tools"),
     }),
     execute: async ({
       task,
       requirements,
+      output_format,
       use_tools,
     }): Promise<{
       result: string;
       success: boolean;
     }> => {
       try {
-        streamContext.sendUIMessage({
-          type: "text",
-          text: JSON.stringify({
-            id: `expert-start-${Date.now()}`,
-            type: "component",
-            status: "finished",
-            componentType: "info",
-            title: "Expert Execution",
-            content: "Engaging Expert V3 for precise implementation...",
-          }),
-        });
+        // Create Expert V3 messages with enhanced task specification
+        const taskDescription = [
+          `Task: ${task}`,
+          `Requirements: ${requirements}`,
+          output_format ? `Expected Output: ${output_format}` : "",
+          "",
+          "Please provide precise, accurate implementation with production-ready quality.",
+        ]
+          .filter(Boolean)
+          .join("\n");
 
-        // Create Expert V3 messages
         const expertMessages = [
           {
             role: "system" as const,
-            parts: [{ type: "text" as const, text: EXPERT_V3_PROMPT }],
+            parts: [{ type: "text" as const, text: HELPER_V3_PROMPT }],
           },
           {
             role: "user" as const,
             parts: [
               {
                 type: "text" as const,
-                text: `Task: ${task}\n\nRequirements: ${requirements}`,
+                text: taskDescription,
               },
             ],
           },
         ];
 
-        // Expert V3 tools
+        // Expert V3 tools (only if requested)
         const expertTools = use_tools
           ? {
               onlineSearch: braveSearchTool,
@@ -381,9 +380,9 @@ export const createExpertV3Tool = (streamContext: StreamContext) => {
           streamContext.stepCountIs
         ) {
           const result = streamContext.streamText({
-            model: { provider: "deepseek", name: "deepseek-chat" }, // Simplified model reference
+            model: { provider: "deepseek", name: "deepseek-chat" },
             messages: streamContext.convertToModelMessages(expertMessages),
-            temperature: 0.1,
+            temperature: 0.1, // Maximum precision
             tools: expertTools,
             stopWhen: streamContext.stepCountIs(8),
           });
@@ -394,32 +393,7 @@ export const createExpertV3Tool = (streamContext: StreamContext) => {
             }
             streamContext.sendUIMessage(part);
           }
-        } else {
-          // Fallback to simple execution
-          responseText = `Expert V3 executed: ${task} with requirements: ${requirements}`;
-
-          streamContext.sendUIMessage({
-            type: "text",
-            text: JSON.stringify({
-              id: `expert-work-${Date.now()}`,
-              type: "text",
-              status: "finished",
-              content: responseText,
-            }),
-          });
         }
-
-        streamContext.sendUIMessage({
-          type: "text",
-          text: JSON.stringify({
-            id: `expert-complete-${Date.now()}`,
-            type: "component",
-            status: "finished",
-            componentType: "success",
-            title: "Expert Complete",
-            content: "Expert V3 has completed the task.",
-          }),
-        });
 
         return {
           result: responseText,
@@ -427,18 +401,6 @@ export const createExpertV3Tool = (streamContext: StreamContext) => {
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-
-        streamContext.sendUIMessage({
-          type: "text",
-          text: JSON.stringify({
-            id: `expert-error-${Date.now()}`,
-            type: "alert",
-            status: "finished",
-            variant: "error",
-            title: "Expert V3 Failed",
-            content: `Expert V3 execution failed: ${errorMsg}`,
-          }),
-        });
 
         return {
           result: `Expert V3 failed: ${errorMsg}`,
@@ -453,12 +415,6 @@ export const createExpertV3Tool = (streamContext: StreamContext) => {
 export const createStreamAwareTools = (streamContext: StreamContext) => ({
   onlineSearch: braveSearchTool,
   fetchWebPage: webScrapeTool,
-  r1Analysis: createR1AnalysisTool(streamContext),
-  expertV3: createExpertV3Tool(streamContext),
+  helperR1: createHelperR1Tool(streamContext),
+  helperV3: createHelperV3Tool(streamContext),
 });
-
-// Default tools for backward compatibility
-export const tools = {
-  onlineSearch: braveSearchTool,
-  fetchWebPage: webScrapeTool,
-};
