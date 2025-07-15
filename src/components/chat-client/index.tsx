@@ -75,15 +75,13 @@ export default function ChatClient({ chatId }: { chatId: string }) {
   }, [chatId, setMessages, chatInitStatus, status, reload]);
 
   return (
-    <div className="flex flex-col h-full">
-      <ChatInterface
-        messages={messages}
-        input={input}
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        status={status}
-        hasInitialQuery={false}
-      />
-    </div>
+    <ChatInterface
+      messages={messages}
+      input={input}
+      handleInputChange={handleInputChange}
+      handleSubmit={handleSubmit}
+      status={status}
+      hasInitialQuery={false}
+    />
   );
 }

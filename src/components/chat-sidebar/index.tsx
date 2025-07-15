@@ -122,14 +122,13 @@ export function ChatSidebar() {
   );
 
   return (
-    <Sidebar className="border-r">
+    <Sidebar collapsible="offcanvas" variant="inset">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-6 w-6 text-blue-600" />
           <span className="font-bold text-lg">MirrorStone</span>
         </div>
-        <Button onClick={handleNewChat} className="w-full" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
+        <Button onClick={handleNewChat} className="w-full" variant="outline">
+          <Plus className="mr-2" />
           New Chat
         </Button>
       </SidebarHeader>

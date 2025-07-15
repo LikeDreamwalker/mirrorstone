@@ -132,6 +132,25 @@
   }
 }
 
+/* Backdrop blur for background colors with opacity */
+@layer utilities {
+  /* Target specific background utilities that should have blur effect */
+  .bg-background,
+  .bg-card,
+  .bg-popover,
+  .bg-secondary,
+  .bg-muted,
+  .bg-accent,
+  .bg-primary,
+  .bg-destructive,
+  .bg-sidebar,
+  .bg-sidebar-primary,
+  .bg-sidebar-accent,
+  .bg-primary-blue {
+    backdrop-filter: blur(0.5rem);
+  }
+}
+
 /* Base styles with font application */
 @layer base {
   * {

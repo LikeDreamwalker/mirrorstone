@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ChatStatus } from "@/components/chat-status";
 import { Send, User, Bot, Copy, Check, Sparkles } from "lucide-react";
 import type { Message } from "@/lib/types";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -129,19 +127,7 @@ export function ChatInterface({
   })();
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
-          <div className="flex items-center">
-            <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
-            <h1 className="text-lg font-semibold">MirrorStone</h1>
-          </div>
-        </div>
-        {/* <ChatStatus /> */}
-      </div>
-
+    <div className="flex flex-col size-full">
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">

@@ -1,5 +1,10 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { ChatSidebar } from "@/components/chat-sidebar";
+import { ThemeButton } from "@/components/theme-button";
 
 export default function ChatLayout({
   children,
@@ -8,10 +13,15 @@ export default function ChatLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-background w-full">
-        <ChatSidebar />
-        <div className="flex-1">{children}</div>
-      </div>
+      <ChatSidebar />
+      <SidebarInset className="relative overflow-hidden">
+        <div className="absolute top-2 left-2 z-20 flex w-full justify-start items-center gap-2">
+          <SidebarTrigger />
+          <ThemeButton variant="ghost" className="h-7 w-7" />
+        </div>
+
+        <div className="size-full">{children}</div>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
