@@ -139,7 +139,7 @@ export function ChatInterface({
             <h1 className="text-lg font-semibold">MirrorStone</h1>
           </div>
         </div>
-        <ChatStatus />
+        {/* <ChatStatus /> */}
       </div>
 
       {/* Messages */}
