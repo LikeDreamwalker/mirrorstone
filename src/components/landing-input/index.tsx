@@ -46,20 +46,15 @@ export default function LandingInput() {
             placeholder="What would you like to search for today?"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-12 pr-4 py-6 text-lg rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 shadow-lg"
+            className="pl-12 pr-4 py-6 text-lg rounded-2xl"
             disabled={isNavigating}
           />
         </div>
-        <div className="flex w-full justify-between items-center p-1">
-          <p className="text-muted-foreground text-sm">
-            WIP and still building
-          </p>
-          <Button
-            type="submit"
-            size="lg"
-            className="mt-4 px-8 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
-            disabled={!query.trim() || isNavigating}
-          >
+        <div className="flex w-full justify-end items-center gap-2 mt-2">
+          <Button type="button" variant="outline">
+            Visit History
+          </Button>
+          <Button type="submit" disabled={!query.trim() || isNavigating}>
             {isNavigating ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
