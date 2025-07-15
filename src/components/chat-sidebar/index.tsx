@@ -82,11 +82,11 @@ export function ChatSidebar() {
     const newChatId = `chat_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
-    router.push(`/${newChatId}`);
+    router.push(`/app/${newChatId}`);
   };
 
   const handleLoadChat = (chat: ChatHistory) => {
-    router.push(`/${chat.id}`);
+    router.push(`/app/${chat.id}`);
   };
 
   const formatChatTitle = (chat: ChatHistory) => {

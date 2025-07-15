@@ -31,7 +31,7 @@ export default function LandingInput() {
         parts: [{ type: "text", text: query.trim() }], // ✅ This is v5 style!
       },
     ]);
-    router.push(`/${chatId}`);
+    router.push(`/app/${chatId}`);
   };
 
   return (
