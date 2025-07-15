@@ -5,6 +5,7 @@ import { saveChatToIndexedDB } from "@/lib/indexeddb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import Link from "next/link";
 
 export default function LandingInput() {
   const [query, setQuery] = useState("");
@@ -51,9 +52,12 @@ export default function LandingInput() {
           />
         </div>
         <div className="flex w-full justify-end items-center gap-2 mt-2">
-          <Button type="button" variant="outline">
-            Visit History
-          </Button>
+          <Link href="/app/">
+            <Button type="button" variant="outline">
+              Visit History
+            </Button>
+          </Link>
+
           <Button type="submit" disabled={!query.trim() || isNavigating}>
             {isNavigating ? (
               <>
