@@ -151,19 +151,15 @@ export function ChatSidebar() {
                       <SidebarMenuButton
                         asChild
                         isActive={currentChatId === chat.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleLoadChat(chat);
+                        }}
                       >
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleLoadChat(chat);
-                          }}
-                          title={title}
-                          className="cursor-pointer"
-                        >
+                        <div className="flex items-center">
                           <MessageSquare className="h-4 w-4" />
                           <span>{title}</span>
-                        </a>
+                        </div>
                       </SidebarMenuButton>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
