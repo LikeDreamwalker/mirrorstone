@@ -91,6 +91,9 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 10.6% 64.9%;
+
+    --scrollbar-thumb: 240 10% 75% / 0.5;
+    --scrollbar-track: 240 10% 90% / 0.1;
   }
 
   .dark {
@@ -129,7 +132,15 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 10.6% 64.9%;
+
+    --scrollbar-thumb: 240 10% 25% / 0.5;
+    --scrollbar-track: 240 10% 10% / 0.1;
   }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--scrollbar-thumb)) hsl(var(--scrollbar-track));
 }
 
 /* Backdrop blur for background colors with opacity */
@@ -148,6 +159,19 @@
   .bg-sidebar-accent,
   .bg-primary-blue {
     backdrop-filter: blur(0.5rem);
+  }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-muted-foreground\/20::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.2);
+  }
+
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background-color: transparent;
   }
 }
 
