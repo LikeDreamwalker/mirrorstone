@@ -149,6 +149,7 @@ export function ChatSidebar() {
                   return (
                     <SidebarMenuItem key={chat.id}>
                       <SidebarMenuButton
+                        className="cursor-pointer"
                         asChild
                         isActive={currentChatId === chat.id}
                         onClick={(e) => {
@@ -163,7 +164,10 @@ export function ChatSidebar() {
                       </SidebarMenuButton>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <SidebarMenuAction showOnHover>
+                          <SidebarMenuAction
+                            showOnHover
+                            className="cursor-pointer"
+                          >
                             <MoreHorizontal />
                             <span className="sr-only">More</span>
                           </SidebarMenuAction>

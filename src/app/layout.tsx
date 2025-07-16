@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Noto_Serif_SC } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-
+import { unstable_ViewTransition as ViewTransition } from "react";
 const notoSerifSC = Noto_Serif_SC({
   subsets: ["latin", "latin-ext"],
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
@@ -32,7 +32,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ViewTransition>{children}</ViewTransition>
         </ThemeProvider>
       </body>
     </html>
