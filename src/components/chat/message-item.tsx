@@ -70,7 +70,7 @@ export const MessageItem = memo(
         cn("p-2.5 relative group w-full overflow-hidden", {
           "bg-primary text-primary-foreground border-primary/20":
             message.role === "user",
-          "bg-background": message.role !== "user",
+          "bg-secondary": message.role !== "user",
         }),
       [message.role]
     );

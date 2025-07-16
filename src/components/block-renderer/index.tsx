@@ -5,7 +5,6 @@ import type { Block } from "./types";
 import { TextBlockComponent } from "./text";
 import { CardBlockComponent } from "./card";
 import { CodeBlockComponent } from "./code";
-import { SubstepsBlockComponent } from "./substeps";
 import { AlertBlockComponent } from "./alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,8 @@ import { ProgressBlockComponent } from "./progress";
 import { QuoteBlockComponent } from "./quote";
 import { TableBlockComponent } from "./table";
 import { BlurFade } from "@/components/magicui/blur-fade";
+// import { MindMapBlockComponent } from "./mindmap";
+// import { MindMapStreamBlockComponent } from "./mindmap-stream";
 
 interface BlockRendererProps {
   streamContent: string;
@@ -81,6 +82,13 @@ const getAnimationConfig = (blockType: string, index: number) => {
         direction: "up" as const,
         blur: "5px",
       };
+    case "mindmap-stream":
+      return {
+        delay: baseDelay + 0.05,
+        duration: baseDuration + 0.05,
+        direction: "up" as const,
+        blur: "3px",
+      };
     case "substeps":
       return {
         delay: baseDelay + 0.2,
@@ -101,12 +109,6 @@ const getAnimationConfig = (blockType: string, index: number) => {
 export function BlockRenderer({ streamContent }: BlockRendererProps) {
   const extractedBlocks = useMemo(() => {
     if (!streamContent) return {};
-
-    console.log(
-      "🔄 Re-computing blocks from content:",
-      streamContent.length,
-      "chars"
-    );
 
     const blocks: Record<string, Block> = {};
     let content = streamContent;
@@ -158,25 +160,10 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
       if (closeBraceIndex !== -1) {
         const blockJson = content.substring(0, closeBraceIndex + 1);
 
-        console.log("🎯 Found JSON block:", blockJson);
-
         try {
           const block = JSON.parse(blockJson) as Block;
 
-          console.log("📦 Parsed block:", {
-            id: block.id,
-            type: block.type,
-            status: block.status,
-            existing: !!blocks[block.id],
-          });
-
           if (block?.id && block?.type && block?.status) {
-            console.log(
-              blocks[block.id]
-                ? "🔄 Updating existing block:"
-                : "✅ Adding new block:",
-              block.id
-            );
             blocks[block.id] = block;
           }
         } catch (error) {
@@ -190,21 +177,10 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
       }
     }
 
-    console.log("📊 Final blocks:", Object.keys(blocks).length);
-    console.log("📋 Block IDs:", Object.keys(blocks));
     return blocks;
   }, [streamContent]);
 
   const renderBlock = (block: Block, index: number) => {
-    console.log(
-      "🎨 Rendering block:",
-      block.id,
-      "type:",
-      block.type,
-      "status:",
-      block.status
-    );
-
     const animationConfig = getAnimationConfig(block.type, index);
 
     // Get the base component without BlurFade wrapper
@@ -219,9 +195,6 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
         break;
       case "code":
         baseComponent = <CodeBlockComponent block={block} />;
-        break;
-      case "substeps":
-        baseComponent = <SubstepsBlockComponent block={block} />;
         break;
       case "alert":
         baseComponent = <AlertBlockComponent block={block} />;
@@ -260,6 +233,11 @@ export function BlockRenderer({ streamContent }: BlockRendererProps) {
           </div>
         );
         break;
+      // case "mindmap":
+      //   return <MindMapBlockComponent key={block.id} block={block} />;
+      // case "mindmap-stream":
+      //   baseComponent = <MindMapStreamBlockComponent block={block as any} />;
+      //   break;
       default:
         baseComponent = (
           <div className="text-red-500">

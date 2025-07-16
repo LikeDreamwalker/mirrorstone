@@ -1,6 +1,5 @@
 import ChatClient from "@/components/chat";
 import { DotPattern } from "@/components/magicui/dot-pattern";
-import { cn } from "@/lib/utils";
 
 export default async function ChatPage({
   params,
