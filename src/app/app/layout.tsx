@@ -20,7 +20,7 @@ export default function ChatLayout({
           <ThemeButton variant="ghost" className="h-7 w-7" />
         </div>
 
-        <div className="size-full">{children}</div>
+        {children}
       </SidebarInset>
     </SidebarProvider>
   );

@@ -1,4 +1,6 @@
-import ChatClient from "@/components/chat-client";
+import ChatClient from "@/components/chat";
+import { DotPattern } from "@/components/magicui/dot-pattern";
+import { cn } from "@/lib/utils";
 
 export default async function ChatPage({
   params,
@@ -9,6 +11,10 @@ export default async function ChatPage({
   return (
     <>
       <ChatClient chatId={chatId} />
+      <DotPattern
+        // glow={true}
+        className="[mask-image:radial-gradient(600px_circle_at_center,white,transparent)]"
+      />
     </>
   );
 }
