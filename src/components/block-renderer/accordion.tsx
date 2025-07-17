@@ -55,14 +55,15 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
           {items.map((item, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
               <AccordionTrigger>
-                <TextBlockComponent
+                {/* <TextBlockComponent
                   content={
                     Array.isArray(item.title)
                       ? item.title.join(" ")
                       : item.title
                   }
                   status="finished"
-                />
+                /> */}
+                {Array.isArray(item.title) ? item.title.join(" ") : item.title}
               </AccordionTrigger>
               <AccordionContent>
                 <TextBlockComponent

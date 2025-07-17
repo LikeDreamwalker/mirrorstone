@@ -261,7 +261,7 @@ export default function ChatClient({
   );
 
   return (
-    <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3">
+    <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
       {/* Floating Chat Button - styled like theme button and sidebar trigger */}
       {!isOpen && (
         <Button
