@@ -6,7 +6,19 @@ import type { UIMessage as Message } from "ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, MessageSquare, X, Minimize2 } from "lucide-react";
+import {
+  Send,
+  MessageSquare,
+  X,
+  Minimize2,
+  Brain,
+  Search,
+  Code,
+  Sparkles,
+  TrendingUp,
+  Lightbulb,
+  Zap,
+} from "lucide-react";
 import { MessageItem } from "./message-item";
 import { saveChatToIndexedDB, getChatFromIndexedDB } from "@/lib/indexeddb";
 import type { ChatHistory } from "@/lib/types";
@@ -182,17 +194,67 @@ export default function ChatClient({
     return null;
   }, [status, chatInitStatus, messages]);
 
-  // Memoized empty state
   const emptyState = useMemo(
     () => (
-      <div className="text-center py-12 px-6">
-        <MessageSquare className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
-        <h3 className="text-lg font-medium mb-3">Ask Sofia</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+      <div className="text-center max-w-xl mx-auto">
+        {/* Logo/Icon Area */}
+        <div className="relative mb-6">
+          <div className="size-12 mx-auto bg-secondary rounded-2xl flex items-center justify-center">
+            <Zap className="size-6 text-foreground" />
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <h2 className="text-xl font-bold mb-4 text-foreground">
+          Start with a question.
+        </h2>
+
+        <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
           {hasInitialQuery
-            ? "Starting your search..."
-            : "Ask me anything and I'll provide comprehensive answers."}
+            ? "Analyzing your business challenge..."
+            : "Your strategic AI partner for business decisions, technical planning, and market insights."}
         </p>
+
+        {/* Quick Capabilities */}
+        {!hasInitialQuery && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <TrendingUp className="h-5 w-5 text-muted-foreground mb-2" />
+                <h4 className="font-medium text-sm text-foreground mb-1">
+                  Strategic Analysis
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Market research, competitive analysis, business planning
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <Lightbulb className="h-5 w-5 text-muted-foreground mb-2" />
+                <h4 className="font-medium text-sm text-foreground mb-1">
+                  Problem Solving
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Complex decisions, trade-off analysis, recommendations
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="p-0">
+              <CardContent className="p-4">
+                <Zap className="h-5 w-5 text-muted-foreground mb-2" />
+                <h4 className="font-medium text-sm text-foreground mb-1">
+                  Technical Guidance
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Architecture decisions, technology choices, implementation
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     ),
     [hasInitialQuery]
@@ -220,13 +282,13 @@ export default function ChatClient({
 
       {isOpen && (
         <Card
-          className="w-full rounded-xl border animate-in slide-in-from-bottom-2 duration-300 absolute bottom-0 left-0 sm:bottom-2 sm:left-2 pt-12 pb-2 px-2"
+          className="w-full rounded-xl border animate-in slide-in-from-bottom-2 duration-300 absolute bottom-0 left-0 sm:bottom-2 sm:left-2 p-2"
           style={{
             height: "calc(100% - 3rem)",
           }}
         >
-          <div className="absolute top-2 right-2">
-            <Button size="icon" variant="ghost" onClick={toggleChat}>
+          <div className="absolute top-2 right-4 z-10">
+            <Button size="icon" variant="secondary" onClick={toggleChat}>
               <Minimize2 />
               <span className="sr-only">Minimize chat</span>
             </Button>
@@ -254,6 +316,7 @@ export default function ChatClient({
             <>
               {/* Messages - Fixed height with internal scrolling */}
               <CardContent className="flex-1 p-0 min-h-0 overflow-x-hidden overflow-y-auto">
+                <div className="w-full h-12"></div>
                 <div className="space-y-2">
                   {messages.length === 0 && chatInitStatus === "ready"
                     ? emptyState

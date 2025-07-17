@@ -38,7 +38,7 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
   const defaultValue = items.map((_, index) => `item-${index}`);
 
   return (
-    <Card className="my-4">
+    <Card className="my-2">
       {content && (
         <CardHeader>
           <CardTitle className="text-base font-medium">
@@ -46,19 +46,15 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
           </CardTitle>
         </CardHeader>
       )}
-      <CardContent className={content ? "pt-0" : ""}>
+      <CardContent>
         <Accordion
           type="multiple"
           className="w-full"
           defaultValue={defaultValue} // This makes all items open by default
         >
           {items.map((item, index) => (
-            <AccordionItem
-              key={index}
-              value={`item-${index}`}
-              className="border-0"
-            >
-              <AccordionTrigger className="hover:no-underline py-3">
+            <AccordionItem key={index} value={`item-${index}`}>
+              <AccordionTrigger>
                 <TextBlockComponent
                   content={
                     Array.isArray(item.title)
@@ -66,10 +62,9 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
                       : item.title
                   }
                   status="finished"
-                  className="m-0 text-left font-medium"
                 />
               </AccordionTrigger>
-              <AccordionContent className="pb-3 text-balance">
+              <AccordionContent>
                 <TextBlockComponent
                   content={
                     Array.isArray(item.content)
@@ -77,7 +72,6 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
                       : item.content
                   }
                   status="finished"
-                  className="m-0 text-muted-foreground"
                 />
               </AccordionContent>
             </AccordionItem>
