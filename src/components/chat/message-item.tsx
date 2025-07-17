@@ -57,7 +57,7 @@ export const MessageItem = memo(
 
     const innerClasses = useMemo(
       () =>
-        `flex gap-2 transition ${
+        `flex gap-2 transition w-full ${
           message.role === "user"
             ? "flex-row-reverse max-w-[95%]"
             : "flex-row max-w-[95%]"
@@ -68,9 +68,8 @@ export const MessageItem = memo(
     const cardClasses = useMemo(
       () =>
         cn("p-2.5 relative group w-full overflow-hidden", {
-          "bg-primary text-primary-foreground border-primary/20":
-            message.role === "user",
-          "bg-secondary": message.role !== "user",
+          "bg-primary text-primary-foreground": message.role === "user",
+          "bg-background text-foreground": message.role !== "user",
         }),
       [message.role]
     );
@@ -94,11 +93,6 @@ export const MessageItem = memo(
             ) : (
               <div className="prose-container">
                 {message.parts?.map((part: any, idx: number) => {
-                  if (part.type === "text") {
-                    return (
-                      <BlockRenderer key={idx} streamContent={part.text} />
-                    );
-                  }
                   if (showReasoning && part.type === "reasoning") {
                     return (
                       <Card key={idx} className="p-0 mb-2 bg-background/50">
@@ -119,6 +113,12 @@ export const MessageItem = memo(
                       </Card>
                     );
                   }
+                  if (part.type === "text") {
+                    return (
+                      <BlockRenderer key={idx} streamContent={part.text} />
+                    );
+                  }
+
                   return null;
                 })}
               </div>
