@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { AlertBlock } from "./types";
 import { TextBlockComponent } from "./text";
+import { cn } from "@/lib/utils";
 
 interface AlertBlockProps {
   block: AlertBlock;
@@ -31,18 +32,19 @@ export function AlertBlockComponent({ block }: AlertBlockProps) {
     }
   };
 
-  const getAlertClassName = () => {
+  const getAlertVariantClasses = () => {
     switch (variant) {
       case "destructive":
-        return "border-red-200 bg-red-50 text-red-900 [&>svg]:text-red-600";
+        // Use shadcn's built-in destructive variant
+        return "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive";
       case "warning":
-        return "border-yellow-200 bg-yellow-50 text-yellow-900 [&>svg]:text-yellow-600";
+        return "border-yellow-500/50 text-yellow-600 dark:border-yellow-500 dark:text-yellow-400 [&>svg]:text-yellow-500 dark:[&>svg]:text-yellow-400";
       case "success":
-        return "border-green-200 bg-green-50 text-green-900 [&>svg]:text-green-600";
+        return "border-green-500/50 text-green-600 dark:border-green-500 dark:text-green-400 [&>svg]:text-green-500 dark:[&>svg]:text-green-400";
       case "info":
-        return "border-blue-200 bg-blue-50 text-blue-900 [&>svg]:text-blue-600";
+        return "border-blue-500/50 text-blue-600 dark:border-blue-500 dark:text-blue-400 [&>svg]:text-blue-500 dark:[&>svg]:text-blue-400";
       default:
-        return "";
+        return "border-border text-foreground [&>svg]:text-muted-foreground";
     }
   };
 
@@ -59,24 +61,19 @@ export function AlertBlockComponent({ block }: AlertBlockProps) {
   }
 
   return (
-    <Alert className={`my-4 ${getAlertClassName()}`}>
+    <Alert
+      className={cn("my-4 border", getAlertVariantClasses())}
+      variant={variant === "destructive" ? "destructive" : "default"}
+    >
       {getIcon()}
       {title && (
-        <AlertTitle>
-          <TextBlockComponent
-            content={title}
-            status="finished"
-            className="m-0"
-          />
+        <AlertTitle className="font-semibold">
+          <TextBlockComponent minimal content={title} status="finished" />
         </AlertTitle>
       )}
       {content && (
         <AlertDescription>
-          <TextBlockComponent
-            content={content}
-            status="finished"
-            className="m-0"
-          />
+          <TextBlockComponent minimal content={content} status="finished" />
         </AlertDescription>
       )}
     </Alert>

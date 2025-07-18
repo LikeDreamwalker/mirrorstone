@@ -10,6 +10,7 @@ interface TextBlockProps {
   status?: "init" | "running" | "finished";
   pure?: boolean;
   className?: string;
+  minimal?: boolean;
 }
 
 export function TextBlockComponent({
@@ -17,6 +18,7 @@ export function TextBlockComponent({
   content: directContent,
   status: directStatus,
   pure = false,
+  minimal = false,
   className,
 }: TextBlockProps) {
   const content = directContent ?? block?.content ?? "";
@@ -39,7 +41,7 @@ export function TextBlockComponent({
     if (pure) {
       return <>{content}</>;
     } else {
-      return <MarkdownRenderer content={content} />;
+      return <MarkdownRenderer minimalStyles={minimal} content={content} />;
     }
   }
   return <></>;
