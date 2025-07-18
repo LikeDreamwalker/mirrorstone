@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, useCallback, memo } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+  memo,
+  startTransition,
+} from "react";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage as Message } from "ai";
 import { Button } from "@/components/ui/button";
@@ -23,6 +31,7 @@ import { MessageItem } from "./message-item";
 import { saveChatToIndexedDB, getChatFromIndexedDB } from "@/lib/indexeddb";
 import type { ChatHistory } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { unstable_ViewTransition as ViewTransition } from "react";
 
 interface ChatClientProps {
   chatId: string;
@@ -174,9 +183,11 @@ export default function ChatClient({
     []
   );
 
-  // Memoized toggle function
+  // Fixed toggle function with startTransition
   const toggleChat = useCallback(() => {
-    setIsOpen((prev) => !prev);
+    startTransition(() => {
+      setIsOpen((prev) => !prev);
+    });
   }, []);
 
   // Memoized status rendering - but responsive to streaming changes
@@ -203,18 +214,15 @@ export default function ChatClient({
             <Zap className="size-6 text-foreground" />
           </div>
         </div>
-
         {/* Main Content */}
         <h2 className="text-xl font-bold mb-4 text-foreground">
           Start with a question.
         </h2>
-
         <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
           {hasInitialQuery
             ? "Analyzing your business challenge..."
             : "Your strategic AI partner for business decisions, technical planning, and market insights."}
         </p>
-
         {/* Quick Capabilities */}
         {!hasInitialQuery && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
@@ -229,7 +237,6 @@ export default function ChatClient({
                 </p>
               </CardContent>
             </Card>
-
             <Card className="p-0">
               <CardContent className="p-4">
                 <Lightbulb className="h-5 w-5 text-muted-foreground mb-2" />
@@ -241,7 +248,6 @@ export default function ChatClient({
                 </p>
               </CardContent>
             </Card>
-
             <Card className="p-0">
               <CardContent className="p-4">
                 <Zap className="h-5 w-5 text-muted-foreground mb-2" />
@@ -260,113 +266,119 @@ export default function ChatClient({
     [hasInitialQuery]
   );
 
+  // ViewTransition is now the outermost element
   return (
-    <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
-      {/* Floating Chat Button - styled like theme button and sidebar trigger */}
-      {!isOpen && (
-        <Button
-          onClick={toggleChat}
-          variant="ghost"
-          size="icon"
-          className="size-7 absolute bottom-2 left-2"
-        >
-          <MessageSquare className="h-4 w-4" />
-          <span className="sr-only">Open chat</span>
-          {messages.length > 0 && (
-            <Badge className="h-4 min-w-4 rounded-full p-0 tabular-nums absolute -top-2 -right-2">
-              {messages.length}
-            </Badge>
-          )}
-        </Button>
-      )}
+    <ViewTransition>
+      {isOpen ? (
+        // When open: show the full chat interface
+        <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
+          <Card
+            className="w-full rounded-xl absolute bottom-0 left-0 sm:bottom-2 sm:left-2 p-2"
+            style={{
+              height: "calc(100% - 3rem)",
+            }}
+          >
+            <div className="absolute top-2 right-4 z-10">
+              <Button size="icon" variant="secondary" onClick={toggleChat}>
+                <Minimize2 />
+                <span className="sr-only">Minimize chat</span>
+              </Button>
+            </div>
 
-      {isOpen && (
-        <Card
-          className="w-full rounded-xl border animate-in slide-in-from-bottom-2 duration-300 absolute bottom-0 left-0 sm:bottom-2 sm:left-2 p-2"
-          style={{
-            height: "calc(100% - 3rem)",
-          }}
-        >
-          <div className="absolute top-2 right-4 z-10">
-            <Button size="icon" variant="secondary" onClick={toggleChat}>
-              <Minimize2 />
-              <span className="sr-only">Minimize chat</span>
-            </Button>
-          </div>
-
-          {/* Show loading state during initialization */}
-          {chatInitStatus === "default" ? (
-            <CardContent className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="flex space-x-1 justify-center mb-4">
-                  <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
-                  <div
-                    className="w-3 h-3 bg-primary rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-3 h-3 bg-primary rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                </div>
-                <p className="text-sm text-muted-foreground">Loading chat...</p>
-              </div>
-            </CardContent>
-          ) : (
-            <>
-              {/* Messages - Fixed height with internal scrolling */}
-              <CardContent className="flex-1 p-0 min-h-0 overflow-x-hidden overflow-y-auto">
-                <div className="w-full h-12"></div>
-                <div className="space-y-2">
-                  {messages.length === 0 && chatInitStatus === "ready"
-                    ? emptyState
-                    : messages.map((message) => (
-                        <MessageItem
-                          key={message.id}
-                          message={message}
-                          copiedMessageId={copiedMessageId}
-                          onCopy={copyToClipboard}
-                          status={status}
-                        />
-                      ))}
-                  {statusBlock}
-                  <div ref={messagesEndRef} />
+            {/* Show loading state during initialization */}
+            {chatInitStatus === "default" ? (
+              <CardContent className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="flex space-x-1 justify-center mb-4">
+                    <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                    <div
+                      className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-3 h-3 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Loading chat...
+                  </p>
                 </div>
               </CardContent>
+            ) : (
+              <>
+                {/* Messages - Fixed height with internal scrolling */}
+                <CardContent className="flex-1 p-0 min-h-0 overflow-x-hidden overflow-y-auto rounded-lg">
+                  <div className="w-full h-12"></div>
+                  <div className="space-y-2">
+                    {messages.length === 0 && chatInitStatus === "ready"
+                      ? emptyState
+                      : messages.map((message) => (
+                          <MessageItem
+                            key={message.id}
+                            message={message}
+                            copiedMessageId={copiedMessageId}
+                            onCopy={copyToClipboard}
+                            status={status}
+                          />
+                        ))}
+                    {statusBlock}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </CardContent>
 
-              {/* Input Section - Fixed at bottom */}
-              <form onSubmit={handleSubmit}>
-                <div className="flex gap-3">
-                  <Input
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder="Ask anything..."
-                    className="flex-1 rounded-lg"
-                    disabled={
-                      status === "streaming" ||
-                      status === "submitted" ||
-                      chatInitStatus === "submitting"
-                    }
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="shrink-0"
-                    disabled={
-                      status === "streaming" ||
-                      status === "submitted" ||
-                      chatInitStatus === "submitting" ||
-                      !input.trim()
-                    }
-                  >
-                    <Send />
-                  </Button>
-                </div>
-              </form>
-            </>
-          )}
-        </Card>
+                {/* Input Section - Fixed at bottom */}
+                <form onSubmit={handleSubmit}>
+                  <div className="flex gap-3">
+                    <Input
+                      value={input}
+                      onChange={handleInputChange}
+                      placeholder="Ask anything..."
+                      className="flex-1 rounded-lg"
+                      disabled={
+                        status === "streaming" ||
+                        status === "submitted" ||
+                        chatInitStatus === "submitting"
+                      }
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="shrink-0"
+                      disabled={
+                        status === "streaming" ||
+                        status === "submitted" ||
+                        chatInitStatus === "submitting" ||
+                        !input.trim()
+                      }
+                    >
+                      <Send />
+                    </Button>
+                  </div>
+                </form>
+              </>
+            )}
+          </Card>
+        </div>
+      ) : (
+        // When closed: show only the floating button
+        <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
+          <Button
+            onClick={toggleChat}
+            variant="ghost"
+            size="icon"
+            className="size-7 absolute bottom-2 left-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="sr-only">Open chat</span>
+            {messages.length > 0 && (
+              <Badge className="h-4 min-w-4 rounded-full p-0 tabular-nums absolute -top-2 -right-2">
+                {messages.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
       )}
-    </div>
+    </ViewTransition>
   );
 }

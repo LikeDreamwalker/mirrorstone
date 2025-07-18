@@ -115,20 +115,16 @@ function MarkdownBase({
 
       // Lists
       ul: ({ children, ...props }) => (
-        <ul className="my-6 ml-6 list-disc [&>li]:mt-2" {...props}>
+        <ul className="ml-6 list-disc" {...props}>
           {children}
         </ul>
       ),
       ol: ({ children, ...props }) => (
-        <ol className="my-6 ml-6 list-decimal [&>li]:mt-2" {...props}>
+        <ol className="ml-6 list-decimal" {...props}>
           {children}
         </ol>
       ),
-      li: ({ children, ...props }) => (
-        <li className="mt-2" {...props}>
-          {children}
-        </li>
-      ),
+      li: ({ children, ...props }) => <li {...props}>{children}</li>,
 
       // Blockquotes
       blockquote: ({ children }) => (
