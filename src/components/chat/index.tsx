@@ -1,5 +1,4 @@
 "use client";
-
 import {
   useEffect,
   useRef,
@@ -18,11 +17,6 @@ import {
   Send,
   MessageSquare,
   X,
-  Minimize2,
-  Brain,
-  Search,
-  Code,
-  Sparkles,
   TrendingUp,
   Lightbulb,
   Zap,
@@ -88,7 +82,7 @@ export default function ChatClient({
   const [chatInitStatus, setChatInitStatus] =
     useState<ChatInitStatus>("default");
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false); // Start closed by default
 
   const {
     messages,
@@ -269,22 +263,32 @@ export default function ChatClient({
   // ViewTransition is now the outermost element
   return (
     <ViewTransition>
-      {isOpen ? (
-        // When open: show the full chat interface
-        <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
+      <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
+        {/* Single floating toggle button - positioned to align with input area */}
+        <Button
+          onClick={toggleChat}
+          size="icon"
+          variant="secondary"
+          className="absolute bottom-5 left-5 z-20 "
+        >
+          {isOpen ? <X /> : <MessageSquare />}
+          <span className="sr-only">{isOpen ? "Close chat" : "Open chat"}</span>
+          {/* Message count badge - only show when closed and there are messages */}
+          {!isOpen && messages.length > 0 && (
+            <Badge className="h-4 min-w-4 rounded-full p-0 tabular-nums absolute -top-1 -right-1 text-xs">
+              {messages.length}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Chat interface - only show when open */}
+        {isOpen && (
           <Card
-            className="w-full rounded-xl absolute bottom-0 left-0 sm:bottom-2 sm:left-2 p-2"
+            className="w-full rounded-xl absolute bottom-0 left-0 sm:bottom-2 sm:left-2 p-2 shadow-xl"
             style={{
               height: "calc(100% - 3rem)",
             }}
           >
-            <div className="absolute top-2 right-4 z-10">
-              <Button size="icon" variant="secondary" onClick={toggleChat}>
-                <Minimize2 />
-                <span className="sr-only">Minimize chat</span>
-              </Button>
-            </div>
-
             {/* Show loading state during initialization */}
             {chatInitStatus === "default" ? (
               <CardContent className="flex-1 flex items-center justify-center">
@@ -310,7 +314,7 @@ export default function ChatClient({
                 {/* Messages - Fixed height with internal scrolling */}
                 <CardContent className="flex-1 p-0 min-h-0 overflow-x-hidden overflow-y-auto rounded-lg">
                   <div className="w-full h-12"></div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 pb-4">
                     {messages.length === 0 && chatInitStatus === "ready"
                       ? emptyState
                       : messages.map((message) => (
@@ -326,10 +330,11 @@ export default function ChatClient({
                     <div ref={messagesEndRef} />
                   </div>
                 </CardContent>
-
-                {/* Input Section - Fixed at bottom */}
-                <form onSubmit={handleSubmit}>
+                {/* Input Section - Fixed at bottom with space reserved for toggle button */}
+                <form onSubmit={handleSubmit} className="mt-2">
                   <div className="flex gap-3">
+                    {/* Reserved space for toggle button - same size as icon button */}
+                    <div className="size-10 shrink-0" />
                     <Input
                       value={input}
                       onChange={handleInputChange}
@@ -359,26 +364,8 @@ export default function ChatClient({
               </>
             )}
           </Card>
-        </div>
-      ) : (
-        // When closed: show only the floating button
-        <div className="absolute bottom-0 left-0 z-10 h-full w-full sm:w-1/3 sm:min-w-md">
-          <Button
-            onClick={toggleChat}
-            variant="ghost"
-            size="icon"
-            className="size-7 absolute bottom-2 left-2"
-          >
-            <MessageSquare className="h-4 w-4" />
-            <span className="sr-only">Open chat</span>
-            {messages.length > 0 && (
-              <Badge className="h-4 min-w-4 rounded-full p-0 tabular-nums absolute -top-2 -right-2">
-                {messages.length}
-              </Badge>
-            )}
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </ViewTransition>
   );
 }
