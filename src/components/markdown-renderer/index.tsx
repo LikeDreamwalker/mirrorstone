@@ -159,7 +159,7 @@ function MarkdownBase({
         <ol
           className={
             minimalStyles
-              ? "list-decimal"
+              ? "list-decimal ml-6"
               : "my-6 ml-6 list-decimal [&>li]:mt-2"
           }
           {...props}

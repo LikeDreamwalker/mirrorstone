@@ -42,11 +42,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
         <CardHeader>
           {title && (
             <CardTitle>
-              <TextBlockComponent
-                content={title}
-                status="finished"
-                className="m-0"
-              />
+              <TextBlockComponent content={title} status="finished" minimal />
             </CardTitle>
           )}
           {description && (
@@ -54,7 +50,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
               <TextBlockComponent
                 content={description}
                 status="finished"
-                className="m-0"
+                minimal
               />
             </CardDescription>
           )}
@@ -74,11 +70,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
       <CardHeader>
         {title && (
           <CardTitle>
-            <TextBlockComponent
-              content={title}
-              status="finished"
-              className="m-0"
-            />
+            <TextBlockComponent content={title} status="finished" minimal />
           </CardTitle>
         )}
         {description && (
@@ -86,7 +78,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
             <TextBlockComponent
               content={description}
               status="finished"
-              className="m-0"
+              minimal
             />
           </CardDescription>
         )}
@@ -100,6 +92,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
                 data
               ).substring(0, 50)}...`}
               status="finished"
+              minimal
             />
           </div>
         )}

@@ -61,6 +61,7 @@ export function AccordionBlockComponent({ block }: AccordionBlockProps) {
                       ? item.title.join(" ")
                       : item.title
                   }
+                  minimal
                   status="finished"
                 />
               </AccordionTrigger>
