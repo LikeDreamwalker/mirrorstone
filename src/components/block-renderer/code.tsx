@@ -7,14 +7,6 @@ interface CodeBlockProps {
 export function CodeBlockComponent({ block }: CodeBlockProps) {
   const { content, language, status } = block;
 
-  console.log("🔍 CodeBlock debug:", {
-    id: block.id,
-    hasContent: !!content,
-    contentLength: content?.length || 0,
-    language,
-    status,
-  });
-
   if (status === "init") {
     return (
       <div className="my-4 rounded-md bg-muted p-4">

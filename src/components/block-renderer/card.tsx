@@ -17,15 +17,6 @@ export function CardBlockComponent({ block }: CardBlockProps) {
   // UPDATED: All use content field now
   const { title, description, content, status, componentType, data } = block;
 
-  console.log("🔍 CardBlock debug:", {
-    id: block.id,
-    hasContent: !!content,
-    hasTitle: !!title,
-    hasDescription: !!description,
-    componentType,
-    status,
-  });
-
   // Render different skeletons based on component type
   if (status === "init") {
     return (
@@ -51,11 +42,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
         <CardHeader>
           {title && (
             <CardTitle>
-              <TextBlockComponent
-                content={title}
-                status="finished"
-                className="m-0"
-              />
+              <TextBlockComponent content={title} status="finished" minimal />
             </CardTitle>
           )}
           {description && (
@@ -63,7 +50,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
               <TextBlockComponent
                 content={description}
                 status="finished"
-                className="m-0"
+                minimal
               />
             </CardDescription>
           )}
@@ -83,11 +70,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
       <CardHeader>
         {title && (
           <CardTitle>
-            <TextBlockComponent
-              content={title}
-              status="finished"
-              className="m-0"
-            />
+            <TextBlockComponent content={title} status="finished" minimal />
           </CardTitle>
         )}
         {description && (
@@ -95,7 +78,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
             <TextBlockComponent
               content={description}
               status="finished"
-              className="m-0"
+              minimal
             />
           </CardDescription>
         )}
@@ -109,6 +92,7 @@ export function CardBlockComponent({ block }: CardBlockProps) {
                 data
               ).substring(0, 50)}...`}
               status="finished"
+              minimal
             />
           </div>
         )}

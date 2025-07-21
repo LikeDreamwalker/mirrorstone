@@ -27,14 +27,6 @@ export interface CodeBlock extends BaseBlock {
   content?: string;
 }
 
-export interface SubstepsBlock extends BaseBlock {
-  type: "substeps";
-  steps: string[];
-  currentStep?: number;
-  completedSteps?: number[];
-  content?: string;
-}
-
 // NEW: Alert/Callout Block
 export interface AlertBlock extends BaseBlock {
   type: "alert";
@@ -93,15 +85,88 @@ export interface AccordionBlock extends BaseBlock {
   content?: string; // For description
 }
 
+export interface MindMapBlock extends BaseBlock {
+  type: "mindmap";
+  title: string;
+  description: string;
+  nodes: Array<{
+    id: string;
+    type: "root" | "branch" | "leaf";
+    data: {
+      label: string;
+      description?: string;
+      color?: string;
+      icon?: string;
+    };
+    position: {
+      x: number;
+      y: number;
+    };
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    type?: "default" | "smoothstep" | "step";
+    animated?: boolean;
+    style?: {
+      stroke?: string;
+      strokeWidth?: number;
+    };
+  }>;
+  layout: "horizontal" | "vertical" | "radial";
+  theme: "default" | "colorful" | "minimal" | "academic";
+}
+
+export interface MindMapStreamBlock extends BaseBlock {
+  type: "mindmap-stream";
+  mindmapId: string;
+  action: "init" | "add-node" | "add-edge" | "complete";
+
+  // Init action data
+  topic?: string;
+  description?: string;
+  layout?: "horizontal" | "vertical" | "radial";
+  theme?: "default" | "colorful" | "minimal" | "academic";
+
+  // Node action data
+  node?: {
+    id: string;
+    type: "root" | "branch" | "leaf";
+    data: {
+      label: string;
+      description?: string;
+      color?: string;
+    };
+    position: {
+      x: number;
+      y: number;
+    };
+  };
+
+  // Edge action data
+  edge?: {
+    id: string;
+    source: string;
+    target: string;
+    type?: "default" | "smoothstep" | "step";
+  };
+
+  // Complete action data
+  finalTitle?: string;
+  finalDescription?: string;
+}
+
 export type Block =
   | TextBlock
   | CardBlock
   | CodeBlock
-  | SubstepsBlock
   | AlertBlock
   | TableBlock
   | QuoteBlock
   | BadgeBlock
   | ProgressBlock
   | SeparatorBlock
-  | AccordionBlock;
+  | AccordionBlock
+  | MindMapBlock
+  | MindMapStreamBlock;

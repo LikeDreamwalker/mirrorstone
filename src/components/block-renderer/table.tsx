@@ -15,8 +15,7 @@ interface TableBlockProps {
 }
 
 export function TableBlockComponent({ block }: TableBlockProps) {
-  const { headers, rows, caption, content, status } = block;
-
+  const { headers = [], rows = [], caption, content, status } = block;
   if (status === "init") {
     return (
       <div className="my-4 rounded-md border">
@@ -45,7 +44,13 @@ export function TableBlockComponent({ block }: TableBlockProps) {
             {headers.map((header, index) => (
               <TableHead key={index}>
                 <TextBlockComponent
-                  content={header}
+                  pure
+                  content={
+                    typeof header === "string"
+                      ? header
+                      : // : header?.content ?? String(header)
+                        ""
+                  }
                   status="finished"
                   className="m-0 font-medium"
                 />
@@ -59,7 +64,13 @@ export function TableBlockComponent({ block }: TableBlockProps) {
               {row.map((cell, cellIndex) => (
                 <TableCell key={cellIndex}>
                   <TextBlockComponent
-                    content={cell}
+                    pure
+                    content={
+                      typeof cell === "string"
+                        ? cell
+                        : // : cell?.content ?? String(cell)
+                          ""
+                    }
                     status="finished"
                     className="m-0"
                   />

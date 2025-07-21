@@ -1,52 +1,48 @@
 import type { TextBlock } from "./types";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { BlurFade } from "@/components/magicui/blur-fade";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TextBlockProps {
   block?: TextBlock;
   content?: string;
   status?: "init" | "running" | "finished";
+  pure?: boolean;
   className?: string;
+  minimal?: boolean;
 }
 
 export function TextBlockComponent({
   block,
   content: directContent,
   status: directStatus,
+  pure = false,
+  minimal = false,
   className,
 }: TextBlockProps) {
   const content = directContent ?? block?.content ?? "";
   const status = directStatus ?? block?.status ?? "finished";
 
-  if (status === "init") {
+  if ((status === "init" || status === "running") && !pure) {
     return (
       <BlurFade delay={0} duration={0.3} direction="up" blur="2px">
-        <div
-          className={`h-6 bg-muted animate-pulse rounded w-3/4 ${
-            className || ""
-          }`}
-        ></div>
-      </BlurFade>
-    );
-  }
-
-  if (status === "running") {
-    return (
-      <BlurFade delay={0} duration={0.4} direction="left" blur="3px">
-        <div className={`${className || ""}`}>
-          <div className="flex items-center gap-2">
-            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-            <span className="text-muted-foreground text-sm">Generating...</span>
-          </div>
+        <div className={cn("space-y-2", className)}>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-1/3" />
         </div>
       </BlurFade>
     );
   }
-
-  // For finished content, add subtle blur animation to the rendered content
-  return (
-    <div className={className}>
-      <MarkdownRenderer content={content} />
-    </div>
-  );
+  if (status === "finished") {
+    if (pure) {
+      return <>{content}</>;
+    } else {
+      return <MarkdownRenderer minimalStyles={minimal} content={content} />;
+    }
+  }
+  return <></>;
 }

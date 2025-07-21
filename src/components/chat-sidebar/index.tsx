@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import Link from "next/link";
@@ -14,14 +16,12 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarFooter,
+  SidebarMenuAction,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus,
   MessageSquare,
   Home,
-  Sparkles,
   Trash2,
   MoreHorizontal,
 } from "lucide-react";
@@ -37,6 +37,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import Logo from "@/components/logo";
+import { Button } from "@/components/ui/button";
 
 export function ChatSidebar() {
   const router = useRouter();
@@ -71,7 +73,6 @@ export function ChatSidebar() {
     await deleteChatFromIndexedDB(chatId);
     await reloadChats();
     setDeletingChatId(null);
-
     // If we're deleting the current chat, redirect to new chat
     if (chatId === currentChatId) {
       handleNewChat();
@@ -82,38 +83,18 @@ export function ChatSidebar() {
     const newChatId = `chat_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
-    router.push(`/${newChatId}`);
+    router.push(`/app/${newChatId}`);
   };
 
   const handleLoadChat = (chat: ChatHistory) => {
-    router.push(`/${chat.id}`);
+    router.push(`/app/${chat.id}`);
   };
 
   const formatChatTitle = (chat: ChatHistory) => {
     const firstUserMessage = chat.messages.find((m) => m.role === "user");
     const userText =
       firstUserMessage?.parts?.find((part) => part.type === "text")?.text ?? "";
-    return userText
-      ? userText.slice(0, 50) + (userText.length > 50 ? "..." : "")
-      : "New Chat";
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffInHours < 168) {
-      // 7 days
-      return date.toLocaleDateString([], { weekday: "short" });
-    } else {
-      return date.toLocaleDateString([], { month: "short", day: "numeric" });
-    }
+    return userText || "New Chat";
   };
 
   // Filter out chats with no messages
@@ -122,21 +103,24 @@ export function ChatSidebar() {
   );
 
   return (
-    <Sidebar className="border-r">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-6 w-6 text-blue-600" />
-          <span className="font-bold text-lg">MirrorStone</span>
-        </div>
-        <Button onClick={handleNewChat} className="w-full" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          New Chat
+    <Sidebar collapsible="offcanvas" variant="inset">
+      {/* Header with title and new chat button */}
+      <SidebarHeader>
+        <h1 className="font-bold text-lg">MirrorStone</h1>
+        <Button
+          className="w-full mt-2"
+          variant="outline"
+          onClick={handleNewChat}
+        >
+          <Plus />
+          <span>New Chat</span>
         </Button>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+      {/* Main content area - constrained height with internal scrolling */}
+      <SidebarContent className="flex flex-col overflow-hidden">
+        {/* Home navigation - fixed height */}
+        <SidebarGroup className="flex-shrink-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -151,45 +135,48 @@ export function ChatSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            Chat History ({validChats.length})
+        {/* Chat History - takes remaining space and scrolls internally */}
+        <SidebarGroup className="flex-1 flex flex-col min-h-0">
+          <SidebarGroupLabel className="flex-shrink-0 font-thin">
+            History ({validChats.length})
           </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <ScrollArea className="h-[400px]">
+          <SidebarGroupContent className="flex-1 min-h-0">
+            <div className="h-full overflow-y-auto bg-background rounded-lg shadow-sm p-2">
               <SidebarMenu>
-                {validChats.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
-                    <div className="flex items-center w-full">
+                {validChats.map((chat) => {
+                  const title = formatChatTitle(chat);
+
+                  return (
+                    <SidebarMenuItem key={chat.id}>
                       <SidebarMenuButton
-                        onClick={() => handleLoadChat(chat)}
+                        className="cursor-pointer"
+                        asChild
                         isActive={currentChatId === chat.id}
-                        className="flex-1 min-w-0 justify-start cursor-pointer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleLoadChat(chat);
+                        }}
                       >
-                        <MessageSquare className="h-4 w-4 shrink-0" />
-                        <div className="flex items-center justify-between min-w-0 flex-1 ml-2 gap-2">
-                          <div className="truncate text-sm min-w-0">
-                            {formatChatTitle(chat)}
-                          </div>
-                          <div className="text-xs text-muted-foreground font-thin shrink-0">
-                            {formatDate(chat.timestamp)}
-                          </div>
+                        <div className="flex items-center">
+                          <MessageSquare className="h-4 w-4" />
+                          <span>{title}</span>
                         </div>
                       </SidebarMenuButton>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 cursor-pointer"
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Chat actions"
+                          <SidebarMenuAction
+                            showOnHover
+                            className="cursor-pointer"
                           >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                            <MoreHorizontal />
+                            <span className="sr-only">More</span>
+                          </SidebarMenuAction>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side="right" align="start">
+                        <DropdownMenuContent
+                          className="w-56 rounded-lg"
+                          side="right"
+                          align="start"
+                        >
                           <DropdownMenuItem
                             onClick={(e) => handleDeleteChat(chat.id, e)}
                             disabled={deletingChatId === chat.id}
@@ -200,19 +187,25 @@ export function ChatSidebar() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
-                  </SidebarMenuItem>
-                ))}
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
-            </ScrollArea>
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
-        <div className="text-xs text-muted-foreground text-center">
-          Powered by DeepSeek V3
+      {/* Footer */}
+      <SidebarFooter>
+        <div className="text-xs font-thin text-muted-foreground pl-2">
+          Built By
         </div>
+        <Link href="https://ldwid.com">
+          <Button asChild className="w-full" variant="outline">
+            <Logo className="text-[#0066FF]" />
+          </Button>
+        </Link>
       </SidebarFooter>
     </Sidebar>
   );
